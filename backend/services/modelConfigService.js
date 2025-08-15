@@ -1,5 +1,5 @@
-import ModelConfig from "../models/Admin/modelConfig.js";
-import { config } from "../config/globalconfig.js";
+import ModelConfig from "../models/modelConfig.js";
+import { config } from "../globalconfig.js";
 
 /**
  * Creates a new model config for the admin
