@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Search,
   Filter,
@@ -12,83 +12,31 @@ import {
   UserPlus,
   Download,
 } from "lucide-react"
+import { addUser, getUsers, updateUser } from "../app/api"
 
 const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedUser, setSelectedUser] = useState(null)
   const [showConfigModal, setShowConfigModal] = useState(false)
+  const [users, setUsers] = useState([])
+  const [showNewUserModal, setShowNewUserModal] = useState(false)
+  const [newUserName, setNewUserName] = useState("")
+  const [newUserEmail, setNewUserEmail] = useState("")
+  const [newUserPassword, setNewUserPassword] = useState("")
 
-  const users = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john.doe@company.com",
-      role: "User",
-      status: "Active",
-      lastActive: "2 hours ago",
-      promptsCount: 145,
-      modelsAccess: ["GPT-4", "Claude", "GPT-3.5"],
-      config: {
-        maxTokens: 4000,
-        temperature: 0.7,
-        topP: 1.0,
-        frequencyPenalty: 0.0,
-      },
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane.smith@company.com",
-      role: "User",
-      status: "Active",
-      lastActive: "1 day ago",
-      promptsCount: 89,
-      modelsAccess: ["GPT-4", "Gemini"],
-      config: {
-        maxTokens: 2000,
-        temperature: 0.5,
-        topP: 0.9,
-        frequencyPenalty: 0.1,
-      },
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike.johnson@company.com",
-      role: "Admin",
-      status: "Inactive",
-      lastActive: "1 week ago",
-      promptsCount: 234,
-      modelsAccess: ["GPT-4", "Claude", "GPT-3.5", "Gemini", "LLaMA"],
-      config: {
-        maxTokens: 8000,
-        temperature: 0.8,
-        topP: 1.0,
-        frequencyPenalty: 0.0,
-      },
-    },
-    {
-      id: 4,
-      name: "Sarah Wilson",
-      email: "sarah.wilson@company.com",
-      role: "User",
-      status: "Active",
-      lastActive: "30 minutes ago",
-      promptsCount: 67,
-      modelsAccess: ["Claude", "GPT-3.5"],
-      config: {
-        maxTokens: 3000,
-        temperature: 0.6,
-        topP: 0.95,
-        frequencyPenalty: 0.05,
-      },
-    },
-  ]
+  
+  useEffect(() => {
+    (async () => {
+      const fetchedUsers = await getUsers()
+      setUsers(fetchedUsers)
+    })()
+   
+  }, [])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || user.status.toLowerCase() === statusFilter
     return matchesSearch && matchesStatus
@@ -96,6 +44,7 @@ const UserManagement = () => {
 
   const toggleUserStatus = (userId) => {
     // In a real app, this would make an API call
+    // updateUser(userId, {active: })
     console.log("Toggle status for user:", userId)
   }
 
@@ -111,7 +60,7 @@ const UserManagement = () => {
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white shadow max-w-2xl w-full max-h-[80vh] overflow-y-auto">
           <div className="p-6 border-b border-storm-grey/20">
-            <h3 className="text-lg font-semibold text-whale-blue">Edit Configuration - {selectedUser.name}</h3>
+            <h3 className="text-lg font-semibold text-whale-blue">Edit Configuration - {selectedUser.username}</h3>
           </div>
 
           <div className="p-6">
@@ -142,24 +91,98 @@ const UserManagement = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-whale-blue">User Management</h1>
-          <p className="text-charcoal/70">Manage users, roles, and configurations</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-whale-blue">User Management</h1>
+            <p className="text-charcoal/70">Manage users, roles, and configurations</p>
+          </div>
+          <div className="flex space-x-3">
+            <button onClick={() => setShowNewUserModal(true)} className="flex items-center px-4 py-2 bg-vibrant-teal text-white bg-slate-800 rounded-lg hover:bg-vibrant-teal/90 transition-colors">
+          <UserPlus size={16} className="mr-2" />
+          Add User
+            </button>
+            <button className="flex items-center px-4 py-2 border border-storm-grey/30 text-charcoal/70 rounded-lg hover:bg-lilly-white transition-colors">
+          <Download size={16} className="mr-2" />
+          Export
+            </button>
+          </div>
         </div>
-        <div className="flex space-x-3">
-          <button className="flex items-center px-4 py-2 bg-vibrant-teal text-white rounded-lg hover:bg-vibrant-teal/90 transition-colors">
-            <UserPlus size={16} className="mr-2" />
-            Add User
-          </button>
-          <button className="flex items-center px-4 py-2 border border-storm-grey/30 text-charcoal/70 rounded-lg hover:bg-lilly-white transition-colors">
-            <Download size={16} className="mr-2" />
-            Export
-          </button>
-        </div>
-      </div>
 
-      {/* Filters */}
+        {/* New User Modal */}
+        {showNewUserModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white shadow max-w-md w-full rounded-lg">
+          <div className="p-6 border-b border-storm-grey/20">
+            <h3 className="text-lg font-semibold text-whale-blue">Add New User</h3>
+          </div>
+          <form
+            className="p-6 space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              await addUser({
+            username: newUserName,
+            email: newUserEmail,
+            password: newUserPassword,
+              })
+              setShowNewUserModal(false)
+              setNewUserName("")
+              setNewUserEmail("")
+              setNewUserPassword("")
+              const fetchedUsers = await getUsers()
+              setUsers(fetchedUsers)
+            }}
+          >
+            <div>
+              <label className="block text-sm font-medium text-whale-blue mb-1">Username</label>
+              <input
+            type="text"
+            required
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
+            className="w-full px-3 py-2 border border-storm-grey/30 rounded-lg focus:ring-2 focus:ring-vibrant-blue focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-whale-blue mb-1">Email</label>
+              <input
+            type="email"
+            required
+            value={newUserEmail}
+            onChange={(e) => setNewUserEmail(e.target.value)}
+            className="w-full px-3 py-2 border border-storm-grey/30 rounded-lg focus:ring-2 focus:ring-vibrant-blue focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-whale-blue mb-1">Password</label>
+              <input
+            type="password"
+            required
+            value={newUserPassword}
+            onChange={(e) => setNewUserPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-storm-grey/30 rounded-lg focus:ring-2 focus:ring-vibrant-blue focus:border-transparent"
+              />
+            </div>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+            type="button"
+            onClick={() => setShowNewUserModal(false)}
+            className="px-4 py-2 text-charcoal/70 hover:text-charcoal transition-colors"
+              >
+            Cancel
+              </button>
+              <button
+            type="submit"
+            className="px-4 py-2 bg-vibrant-blue text-white bg-slate-900 rounded-lg hover:bg-vibrant-blue/90 transition-colors"
+              >
+            Add User
+              </button>
+            </div>
+          </form>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
       <div className="bg-white shadow p-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
@@ -237,7 +260,7 @@ const UserManagement = () => {
                   <td className="px-6 py-4 text-sm font-medium text-whale-blue">{user.promptsCount}</td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
-                      {user.modelsAccess.slice(0, 2).map((model, index) => (
+                      {user.modelsAccess?.slice(0, 2).map((model, index) => (
                         <span
                           key={index}
                           className="inline-flex px-2 py-1 text-xs bg-dusky-orange/10 text-dusky-orange rounded"
@@ -245,9 +268,9 @@ const UserManagement = () => {
                           {model}
                         </span>
                       ))}
-                      {user.modelsAccess.length > 2 && (
+                      {user.modelsAccess?.length > 2 && (
                         <span className="inline-flex px-2 py-1 text-xs bg-storm-grey/20 text-charcoal/70 rounded">
-                          +{user.modelsAccess.length - 2}
+                          +{user.modelsAccess?.length - 2}
                         </span>
                       )}
                     </div>
