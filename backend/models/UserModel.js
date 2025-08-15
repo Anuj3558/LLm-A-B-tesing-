@@ -80,6 +80,6 @@ userSchema.post('save', async function(doc) {
   }
 });
 
-const User = mongoose.model("User", userSchema);
+const UserModel = mongoose.model("User", userSchema);
 
-export default User;
+export default UserModel;

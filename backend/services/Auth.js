@@ -2,9 +2,10 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Admin from "../models/AdminModel.js";
-import User from "../models/UserModel.js";
+import UserModel from "../models/UserModel.js";
 
-export const User = async (req, res) => {
+
+export const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
     console.log("Login attempt with username:", username);
@@ -23,7 +24,7 @@ export const User = async (req, res) => {
       userCollection = "Admin";
     } else {
       // If not found in Admin, check in User collection
-      foundUser = await User.findOne({ email:username });
+      foundUser = await UserModel.findOne({ email:username });
       if (foundUser) {
         userCollection = "User";
       }

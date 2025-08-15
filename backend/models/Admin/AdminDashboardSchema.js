@@ -43,6 +43,6 @@ const dashboardSchema = new Schema({
   recentActivity: [recentActivitySchema]
 }, { timestamps: true });
 
-const Dashboard = mongoose.model('Dashboard', dashboardSchema);
+const AdminDashboard = mongoose.model('AdminDashboard', dashboardSchema);
 
-export default Dashboard;
+export default AdminDashboard;

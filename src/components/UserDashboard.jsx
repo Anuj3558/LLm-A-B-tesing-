@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { TestTube, Cpu, Clock, Zap, TrendingUp, ThumbsUp, ThumbsDown, Activity, Settings, History } from "lucide-react"
 import {
   BarChart,
@@ -14,68 +15,87 @@ import {
   ResponsiveContainer,
 } from "recharts"
 
-const UserDashboard = () => {
-  // Mock user data
+const UserDashboard = ({ userId }) => {
+  const [dashboardData, setDashboardData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    console.log(userId)
+    const fetchDashboard = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dashboards/user/${userId}`)
+        if (!res.ok) throw new Error("Failed to fetch dashboard data")
+        const data = await res.json()
+        setDashboardData(data)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboard()
+  }, [userId])
+
+  if (loading) return <p className="p-6 text-center">Loading dashboard...</p>
+  if (error) return <p className="p-6 text-center text-red-500">{error}</p>
+  if (!dashboardData) return null
+
+  // Metric cards mapping
   const userMetrics = [
-    { title: "Prompts Tested", value: "127", change: "+15%", icon: TestTube, color: "vibrant-blue" },
-    { title: "Best Performing Model", value: "GPT-4", change: "89% accuracy", icon: Cpu, color: "vibrant-teal" },
-    { title: "Average Response Time", value: "1.2s", change: "-0.3s", icon: Clock, color: "dusky-orange" },
-    { title: "Tokens Used This Week", value: "12.4K", change: "+8%", icon: Zap, color: "forest-green" },
+    {
+      title: "Prompts Tested",
+      value: dashboardData.promptsTested,
+      change: "+15%", // you can calculate from last week’s data
+      icon: TestTube,
+      color: "vibrant-blue",
+    },
+    {
+      title: "Best Performing Model",
+      value: dashboardData.bestPerformingModel,
+      change: `${dashboardData.accuracy}% accuracy`,
+      icon: Cpu,
+      color: "vibrant-teal",
+    },
+    {
+      title: "Average Response Time",
+      value: `${(dashboardData.averageResponseTime / 1000).toFixed(1)}s`,
+      change: "-0.3s", // calculated from history
+      icon: Clock,
+      color: "dusky-orange",
+    },
+    {
+      title: "Tokens Used This Week",
+      value: dashboardData.tokensUsedThisWeek.toLocaleString(),
+      change: "+8%", // calculated from last week
+      icon: Zap,
+      color: "forest-green",
+    },
   ]
 
-  const modelUsageData = [
-    { model: "GPT-4", count: 45 },
-    { model: "Claude 3", count: 32 },
-    { model: "GPT-3.5", count: 28 },
-    { model: "Gemini", count: 15 },
-    { model: "LLaMA", count: 7 },
-  ]
+  // Convert backend map to chart format
+  const modelUsageData = Object.entries(dashboardData.modelUsageDistribution || {}).map(([model, count]) => ({
+    model,
+    count,
+  }))
 
-  const weeklyPerformanceData = [
-    { day: "Mon", accuracy: 85 },
-    { day: "Tue", accuracy: 88 },
-    { day: "Wed", accuracy: 82 },
-    { day: "Thu", accuracy: 91 },
-    { day: "Fri", accuracy: 87 },
-    { day: "Sat", accuracy: 89 },
-    { day: "Sun", accuracy: 93 },
-  ]
+  const weeklyPerformanceData = dashboardData.weeklyPerformanceScores || []
 
   const feedbackData = [
-    { name: "Positive", value: 78, color: "#44BE9F" },
-    { name: "Negative", value: 22, color: "#E63647" },
+    { name: "Positive", value: dashboardData.feedback.positive, color: "#44BE9F" },
+    { name: "Negative", value: dashboardData.feedback.negative, color: "#E63647" },
   ]
 
-  const recentTests = [
-    {
-      prompt: "Explain machine learning concepts...",
-      model: "GPT-4",
-      timestamp: "2 hours ago",
-      accuracy: 92,
-      feedback: "positive",
-    },
-    {
-      prompt: "Write a Python function for...",
-      model: "Claude 3",
-      timestamp: "4 hours ago",
-      accuracy: 88,
-      feedback: "positive",
-    },
-    {
-      prompt: "Summarize the following article...",
-      model: "GPT-3.5",
-      timestamp: "6 hours ago",
-      accuracy: 75,
-      feedback: "negative",
-    },
-    {
-      prompt: "Generate creative content about...",
-      model: "Gemini",
-      timestamp: "1 day ago",
-      accuracy: 85,
-      feedback: "positive",
-    },
-  ]
+  const recentTests = dashboardData.testLogs
+    .slice(-4)
+    .reverse()
+    .map((log) => ({
+      prompt: log.prompt,
+      model: log.model,
+      timestamp: new Date(log.time).toLocaleString(),
+      accuracy: log.accuracy,
+      feedback: log.feedback,
+    }))
 
   const getFeedbackIcon = (feedback) => {
     return feedback === "positive" ? (
@@ -89,7 +109,7 @@ const UserDashboard = () => {
     <div className="space-y-8 animate-fade-in">
       {/* Welcome Header */}
       <div className="bg-white shadow p-6 genzeon-gradient text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, John! 👋</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome back! 👋</h1>
         <p className="opacity-90">Here's your LLM testing performance overview</p>
       </div>
 
@@ -133,14 +153,7 @@ const UserDashboard = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis type="number" stroke="#6B7280" />
               <YAxis dataKey="model" type="category" stroke="#6B7280" width={80} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              />
+              <Tooltip />
               <Bar dataKey="count" fill="#2F5EF5" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -157,17 +170,10 @@ const UserDashboard = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="day" stroke="#6B7280" />
               <YAxis stroke="#6B7280" domain={[70, 100]} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              />
+              <Tooltip />
               <Line
                 type="monotone"
-                dataKey="accuracy"
+                dataKey="score"
                 stroke="#44BE9F"
                 strokeWidth={3}
                 dot={{ fill: "#44BE9F", strokeWidth: 2, r: 6 }}
@@ -194,14 +200,7 @@ const UserDashboard = () => {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              />
+              <Tooltip />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 flex justify-center space-x-6">

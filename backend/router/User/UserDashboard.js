@@ -1,6 +1,6 @@
 // routes/dashboard.js
 import express from "express";
-import Dashboard from "../models/Dashboard.js";
+import UserDashboard from "../../models/User/UserDashBoardSchema.js";
 
 const router = express.Router();
 
@@ -9,7 +9,7 @@ const router = express.Router();
  */
 router.post("/", async (req, res) => {
   try {
-    const dashboard = new Dashboard(req.body);
+    const dashboard = new UserDashboard(req.body);
     const savedDashboard = await dashboard.save();
     res.status(201).json(savedDashboard);
   } catch (err) {
@@ -23,12 +23,12 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
-    const dashboards = await Dashboard.find()
+    const dashboards = await UserDashboard.find()
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
 
-    const total = await Dashboard.countDocuments();
+    const total = await UserDashboard.countDocuments();
 
     res.json({
       total,
@@ -46,7 +46,7 @@ router.get("/", async (req, res) => {
  */
 router.get("/user/:userId", async (req, res) => {
   try {
-    const dashboard = await Dashboard.findOne({ userId: req.params.userId });
+    const dashboard = await UserDashboard.findOne({ userId: req.params.userId });
     if (!dashboard) return res.status(404).json({ error: "Dashboard not found" });
     res.json(dashboard);
   } catch (err) {
@@ -59,7 +59,7 @@ router.get("/user/:userId", async (req, res) => {
  */
 router.put("/:id", async (req, res) => {
   try {
-    const updatedDashboard = await Dashboard.findByIdAndUpdate(
+    const updatedDashboard = await UserDashboard.findByIdAndUpdate(
       req.params.id,
       { ...req.body, updatedAt: Date.now() },
       { new: true, runValidators: true }
@@ -76,7 +76,7 @@ router.put("/:id", async (req, res) => {
  */
 router.delete("/:id", async (req, res) => {
   try {
-    const deletedDashboard = await Dashboard.findByIdAndDelete(req.params.id);
+    const deletedDashboard = await UserDashboard.findByIdAndDelete(req.params.id);
     if (!deletedDashboard) return res.status(404).json({ error: "Dashboard not found" });
     res.json({ message: "Dashboard deleted successfully" });
   } catch (err) {

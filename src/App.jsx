@@ -79,7 +79,7 @@ function App() {
             }
           >
             <Route index element={<Navigate to="/user/dashboard" />} />
-            <Route path="dashboard" element={<UserDashboard />} />
+            <Route path="dashboard" element={<UserDashboard userId = {user.id}/>} />
             <Route path="test" element={<PromptTesting />} />
             <Route path="history" element={<PromptHistory />} />
             <Route path="settings" element={<UserSettings />} />
