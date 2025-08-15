@@ -3,7 +3,7 @@ import {
   getAllModelConfigs,
   updateModelConfigById,
   deleteModelConfigById
-} from "../../../services/modelConfigService.js";
+} from "../../services/modelConfigService.js";
 import verifySecretKey from "../../../middleware/VerifySecrete.js";
 
 export const createConfig = async (req, res) => {
