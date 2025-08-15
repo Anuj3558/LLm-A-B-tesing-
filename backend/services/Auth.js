@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/AdminModel.js";
 import User from "../models/UserModel.js";
 
-export const loginUser = async (req, res) => {
+export const User = async (req, res) => {
   try {
     const { username, password } = req.body;
     console.log("Login attempt with username:", username);
