@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { Users, MessageSquare, Cpu, Activity, Clock, CheckCircle, AlertCircle } from "lucide-react"
 import {
   BarChart,
@@ -13,92 +14,83 @@ import {
   Area,
   AreaChart,
 } from "recharts"
+import { Skeleton } from "antd"
 
+export const AdminDashboardSkeleton = () => {
+  return (
+    <div className="space-y-8">
+      {/* Welcome Header Skeleton */}
+      <Skeleton.Input active className="!h-28 !w-full" />
+
+      {/* KPI Cards Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((item) => (
+          <Skeleton key={item} active paragraph={{ rows: 3 }} />
+        ))}
+      </div>
+
+      {/* Charts Section Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {[1, 2, 3, 4].map((item) => (
+          <Skeleton key={item} active paragraph={{ rows: 6 }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+const getCookie = (name) => {
+    const nameEQ = name + "="
+    const ca = document.cookie.split(';')
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i]
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+    }
+    return null
+  }
+ const getAuthToken = () => {
+    return getCookie('authToken')
+  }
+const getApiHeaders = () => {
+    const token = getAuthToken()
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
+  }
 const AdminDashboard = () => {
-  // Mock data
-  const kpiData = [
-    { 
-      title: "Active Users", 
-      value: "1,247", 
-      change: "+12%", 
-      icon: Users, 
-      color: "vibrant-blue" 
-    },
-    { 
-      title: "Total Registered Users", 
-      value: "3,891", 
-      change: "+8%", 
-      icon: MessageSquare, 
-      color: "vibrant-teal" 
-    },
-    { 
-      title: "Total Prompts Tested", 
-      value: "15,632", 
-      change: "+24%", 
-      icon: Activity, 
-      color: "dusky-orange" 
-    },
-    { 
-      title: "Most Used LLM", 
-      value: "GPT-4", 
-      change: "45%", 
-      icon: Cpu, 
-      color: "forest-green" 
-    },
-  ]
+  const [loading, setLoading] = useState(true)
+  const [dashboardData, setDashboardData] = useState(null)
+  const [error, setError] = useState(null)
 
-  const tokenUsageData = [
-    { date: "Jan 1", tokens: 12000 },
-    { date: "Jan 2", tokens: 15000 },
-    { date: "Jan 3", tokens: 18000 },
-    { date: "Jan 4", tokens: 14000 },
-    { date: "Jan 5", tokens: 22000 },
-    { date: "Jan 6", tokens: 25000 },
-    { date: "Jan 7", tokens: 28000 },
-  ]
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/dashboard`,{
+          headers: getApiHeaders()
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        const finalData = data.data
+        console.log("Dashboard data:", finalData)
+        setDashboardData({
+          finalData
+      })
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err)
+        setError("Failed to load dashboard data. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  const modelLatencyData = [
-    { model: "GPT-4", latency: 1200 },
-    { model: "GPT-3.5", latency: 800 },
-    { model: "Claude", latency: 950 },
-    { model: "Gemini", latency: 1100 },
-    { model: "LLaMA", latency: 750 },
-  ]
-
-  const responseAcceptanceData = [
-    { model: "GPT-4", value: 45, color: "#2F5EF5" },
-    { model: "Claude", value: 25, color: "#44BE9F" },
-    { model: "GPT-3.5", value: 15, color: "#F6851F" },
-    { model: "Gemini", value: 10, color: "#155F73" },
-    { model: "Others", value: 5, color: "#8DCBE8" },
-  ]
-
-  const recentActivity = [
-    { 
-      user: "John Doe", 
-      action: "Tested prompt with GPT-4", 
-      time: "2 minutes ago", 
-      status: "success" 
-    },
-    { 
-      user: "Jane Smith", 
-      action: "Compared 3 models", 
-      time: "5 minutes ago", 
-      status: "success" 
-    },
-    { 
-      user: "Mike Johnson", 
-      action: "Failed API call to Claude", 
-      time: "8 minutes ago", 
-      status: "error" 
-    },
-    { 
-      user: "Sarah Wilson", 
-      action: "Updated model preferences", 
-      time: "12 minutes ago", 
-      status: "info" 
-    },
-  ]
+    fetchDashboardData()
+  }, [])
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -109,6 +101,32 @@ const AdminDashboard = () => {
       default:
         return <Clock className="w-4 h-4 text-dusky-orange" />
     }
+  }
+
+  if (loading) {
+    return <AdminDashboardSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center p-6 bg-white shadow rounded-lg max-w-md">
+          <AlertCircle className="w-12 h-12 text-crimson mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-whale-blue mb-2">Error Loading Dashboard</h3>
+          <p className="text-charcoal/70">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-vibrant-blue text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!dashboardData) {
+    return null
   }
 
   return (
@@ -123,8 +141,9 @@ const AdminDashboard = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiData.map((kpi, index) => {
+        { dashboardData.finalData.kpiData.map((kpi, index) => {
           const Icon = kpi.icon
+          console.log("KPI Data:", kpi)
           return (
             <div
               key={index}
@@ -149,14 +168,14 @@ const AdminDashboard = () => {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1  *: lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Token Usage Trend */}
         <div className="bg-white shadow p-6">
           <h3 className="text-lg font-semibold text-whale-blue mb-4">
             Token Usage Trend
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={tokenUsageData}>
+            <AreaChart data={dashboardData.tokenUsageData}>
               <defs>
                 <linearGradient id="tokenGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#2F5EF5" stopOpacity={0.3} />
@@ -191,7 +210,7 @@ const AdminDashboard = () => {
             Model Latency Comparison
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={modelLatencyData}>
+            <BarChart data={dashboardData.modelLatencyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="model" stroke="#6B7280" />
               <YAxis stroke="#6B7280" />
@@ -220,7 +239,7 @@ const AdminDashboard = () => {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={responseAcceptanceData}
+                data={dashboardData.finalData.responseAcceptanceData}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -228,7 +247,7 @@ const AdminDashboard = () => {
                 paddingAngle={5}
                 dataKey="value"
               >
-                {responseAcceptanceData.map((entry, index) => (
+                {dashboardData.finalData.responseAcceptanceData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -243,7 +262,7 @@ const AdminDashboard = () => {
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            {responseAcceptanceData.map((item, index) => (
+            {dashboardData.finalData.responseAcceptanceData.map((item, index) => (
               <div key={index} className="flex items-center">
                 <div 
                   className="w-3 h-3 rounded-full mr-2" 
@@ -263,25 +282,28 @@ const AdminDashboard = () => {
             Recent Activity
           </h3>
           <div className="space-y-4">
-            {recentActivity.map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-start space-x-3 p-3 hover:bg-lilly-white rounded-lg transition-colors"
-              >
-                {getStatusIcon(activity.status)}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-whale-blue">
-                    {activity.user}
-                  </p>
-                  <p className="text-sm text-charcoal/70">
-                    {activity.action}
-                  </p>
-                  <p className="text-xs text-charcoal/50 mt-1">
-                    {activity.time}
-                  </p>
-                </div>
-              </div>
-            ))}
+            {dashboardData.finalData.recentActivity
+  .slice(-5) // Take last 5 elements
+  .reverse() // Reverse to show in descending order (newest first)
+  .map((activity, index) => (
+    <div
+      key={index}
+      className="flex items-start space-x-3 p-3 hover:bg-lilly-white rounded-lg transition-colors"
+    >
+      {getStatusIcon(activity.status)}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-whale-blue">
+          {activity.user}
+        </p>
+        <p className="text-sm text-charcoal/70">
+          {activity.action}
+        </p>
+        <p className="text-xs text-charcoal/50 mt-1">
+          {activity.time}
+        </p>
+      </div>
+    </div>
+  ))}
           </div>
         </div>
       </div>

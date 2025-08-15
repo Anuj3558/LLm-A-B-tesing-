@@ -1,47 +1,183 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Eye, EyeOff, Sparkles } from "lucide-react"
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+
+// Get API URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+
+const loginAPI = async (email, password) => {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ username: email, password }),
+  })
+  
+
+  
+  return response.json()
+}
+
+const validateTokenAPI = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/auth/validate`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+  
+  if (!response.ok) {
+    throw new Error('Token validation failed')
+  }
+  
+  return response.json()
+}
+
+// Cookie utility functions
+const setCookie = (name, value, days = 7) => {
+  const expires = new Date()
+  expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000))
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Strict;Secure`
+}
+
+const getCookie = (name) => {
+  const nameEQ = name + "="
+  const ca = document.cookie.split(';')
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i]
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+  }
+  return null
+}
+
+const deleteCookie = (name) => {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+}
 
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
 
-  // Demo credentials
-  const demoCredentials = [
-    { email: "admin@genzeon.com", password: "admin123", role: "admin", name: "Admin User" },
-    { email: "user@genzeon.com", password: "user123", role: "user", name: "John Doe" },
-  ]
+  // Check for existing token on component mount
+  useEffect(() => {
+    const checkExistingToken = async () => {
+      try {
+        const token = getCookie('authToken')
+        
+        if (token) {
+          toast.info('Validating existing session...', {
+            autoClose: 2000,
+          })
+
+          const response = await validateTokenAPI(token)
+          
+          if (response.valid && response.user) {
+            toast.success(`Authentication successful. Redirecting...`, {
+              autoClose: 3000,
+            })
+
+            // Navigate based on role
+          } else {
+            // Invalid token, remove it
+            deleteCookie('authToken')
+            toast.warn('Session expired. Please login again.', {
+              autoClose: 3000,
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Token validation error:', error)
+        deleteCookie('authToken')
+        toast.error('Failed to validate session. Please login.', {
+          autoClose: 3000,
+        })
+      } finally {
+        setInitialLoading(false)
+      }
+    }
+
+    checkExistingToken()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await loginAPI(email, password)
+      console.log('Login response:', response)
+      if (response.token && response.message === 'Login successful') {
+        // Store token in cookies
+        setCookie('authToken', response.token, 7) // 7 days expiry
+        
+        // Show success notification
+        toast.success(`Welcome back, ${response.user?.username || response.user?.email || 'User'}!`, {
+          autoClose: 3000,
+        })
 
-    const user = demoCredentials.find((cred) => cred.email === email && cred.password === password)
+        // Call onLogin prop if provided
+        if (onLogin) {
+          onLogin(response.user)
+        }
 
-    if (user) {
-      onLogin(user)
-    } else {
-      alert("Invalid credentials. Please use demo credentials.")
+        // Navigate based on role
+        setTimeout(() => {
+          // Your navigation logic here
+        }, 1000)
+      } else {
+        throw new Error(response?.message || 'Invalid credentials. Please try again.')
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      toast.error(error.message || 'Invalid credentials. Please try again.', {
+        autoClose: 4000,
+      })
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
-  const fillDemoCredentials = (role) => {
-    const cred = demoCredentials.find((c) => c.role === role)
-    setEmail(cred.email)
-    setPassword(cred.password)
+  // Show loading spinner while checking initial token
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="absolute inset-0 genzeon-gradient opacity-10"></div>
+        <div className="relative text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full genzeon-gradient mb-4 animate-pulse">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-charcoal/70">Checking authentication...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="absolute inset-0 genzeon-gradient opacity-10"></div>
+
+      {/* Toast container - this is where notifications will appear */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
 
       <div className="relative w-full max-w-md">
         <div className="bg-white shadow-2xl apple-blur p-8 animate-scale-in">
@@ -52,27 +188,6 @@ const LoginPage = ({ onLogin }) => {
             </div>
             <h1 className="text-2xl font-bold text-whale-blue mb-2">Welcome Back</h1>
             <p className="text-charcoal/70">Sign in to your LLM Testing Platform</p>
-          </div>
-
-          {/* Demo Credentials */}
-          <div className="mb-6 p-4 bg-lilly-white rounded-lg">
-            <p className="text-sm font-medium text-whale-blue mb-3">Demo Credentials:</p>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials("admin")}
-                className="w-full text-left p-2 text-xs bg-white rounded border hover:bg-vibrant-blue hover:text-gray-500 transition-colors"
-              >
-                <strong>Admin:</strong> admin@genzeon.com / admin123
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials("user")}
-                className="w-full text-left p-2 text-xs bg-white rounded border hover:bg-vibrant-blue hover:text-gray-500  transition-colors"
-              >
-                <strong>User:</strong> user@genzeon.com / user123
-              </button>
-            </div>
           </div>
 
           {/* Login Form */}
@@ -86,6 +201,7 @@ const LoginPage = ({ onLogin }) => {
                 className="w-full px-4 py-3 border border-storm-grey/30 rounded-lg focus:ring-2 focus:ring-vibrant-blue focus:border-transparent transition-all"
                 placeholder="Enter your email"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -99,11 +215,13 @@ const LoginPage = ({ onLogin }) => {
                   className="w-full px-4 py-3 pr-12 border border-storm-grey/30 rounded-lg focus:ring-2 focus:ring-vibrant-blue focus:border-transparent transition-all"
                   placeholder="Enter your password"
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-charcoal/50 hover:text-charcoal transition-colors"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>

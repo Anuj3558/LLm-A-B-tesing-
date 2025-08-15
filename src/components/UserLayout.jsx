@@ -33,7 +33,7 @@ const UserLayout = ({ user, onLogout }) => {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-full flex-col bg-white shadow apple-blur m-4 rounded-2xl">
+        <div className="flex h-full flex-col bg-white  apple-blur m-4 rounded-2xl">
           {/* Logo */}
           <div className="flex items-center justify-between p-6 border-b border-storm-grey/20">
             <div className="flex items-center">
@@ -74,14 +74,14 @@ const UserLayout = ({ user, onLogout }) => {
             <div className="flex items-center mb-4">
               <div className="w-10 genzeon-gradient h-10 rounded-full bg-vibrant-teal flex items-center justify-center mr-3">
                 <span className="text-white  font-medium text-sm">
-                  {user.name
+                  {user.username || user.email
                     .split(" ")
                     .map((n) => n[0])
                     .join("")}
                 </span>
               </div>
               <div>
-                <p className="text-sm font-medium text-whale-blue">{user.name}</p>
+                <p className="text-sm font-medium text-whale-blue">{user.username}</p>
                 <p className="text-xs text-charcoal/50">{user.email}</p>
               </div>
             </div>
