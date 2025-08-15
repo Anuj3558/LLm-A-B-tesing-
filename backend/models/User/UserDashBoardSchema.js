@@ -108,5 +108,5 @@ const DashboardSchema = new mongoose.Schema({
 
 // Index for analytics queries
 DashboardSchema.index({ userId: 1, createdAt: -1 });
-
-export default mongoose.model("Dashboard", DashboardSchema);
+const Dashboard = mongoose.model("UserDashboard", DashboardSchema);
+export default Dashboard;

@@ -20,14 +20,14 @@ const modelConfigSchema = new Schema({
     type: String,
     required: true,
   },
-  endpoint: {
-    type: String,
-    required: true,
-  },
-  route: {
-    type: String,
-    required: true,
-  },
+  // endpoint: {
+  //   type: String,
+  //   required: true,
+  // },
+  // route: {
+  //   type: String,
+  //   required: true,
+  // },
   parameters: {
     temperature: { type: Number, default: 0.7 },
     max_tokens: { type: Number, default: 1000 },

@@ -1,6 +1,6 @@
 // routes/dashboard.js
 import express from "express";
-import Dashboard from "../models/Dashboard.js";
+import Dashboard from "../../models/User/UserDashBoardSchema.js"; // Ensure this path is correct
 
 const router = express.Router();
 

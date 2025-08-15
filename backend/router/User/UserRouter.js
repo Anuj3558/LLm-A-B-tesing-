@@ -1,4 +1,4 @@
-import Dashboard from "./Dashboard"
+import Dashboard from "./Dashboard.js"
 
 import express from "express";
 const router = express.Router();

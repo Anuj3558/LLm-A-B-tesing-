@@ -12,7 +12,6 @@ const UserLayout = ({ user, onLogout }) => {
     { name: "Dashboard", href: "/user/dashboard", icon: LayoutDashboard },
     { name: "Prompt Testing", href: "/user/test", icon: TestTube },
     { name: "Prompt History", href: "/user/history", icon: History },
-    { name: "Settings", href: "/user/settings", icon: Settings },
   ]
 
   const isActive = (href) => location.pathname === href
