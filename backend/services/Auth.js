@@ -2,7 +2,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Admin from "../models/AdminModel.js";
-import User from "../models/UserModel.js";
+import UserModel from "../models/UserModel.js";
+
 
 export const loginUser = async (req, res) => {
   try {
@@ -23,7 +24,7 @@ export const loginUser = async (req, res) => {
       userCollection = "Admin";
     } else {
       // If not found in Admin, check in User collection
-      foundUser = await User.findOne({ email:username });
+      foundUser = await UserModel.findOne({ email:username });
       if (foundUser) {
         userCollection = "User";
       }
@@ -47,7 +48,7 @@ export const loginUser = async (req, res) => {
 
     // Update lastLogin timestamp for User collection
     if (userCollection === "User") {
-      await User.findByIdAndUpdate(
+      await UserModel.findByIdAndUpdate(
         foundUser._id,
         { lastLogin: new Date() },
         { new: true }
