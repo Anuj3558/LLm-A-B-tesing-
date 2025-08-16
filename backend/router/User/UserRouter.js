@@ -1,9 +1,9 @@
-import UserDashboard from "../../../src/components/UserDashboard.jsx";
+import Dashboard from "./Dashboard"
 
 import express from "express";
 const router = express.Router();
 
 
-router.use("/dashboard", UserDashboard);
+router.use("/dashboard", Dashboard);
 
 export default router;
