@@ -8,9 +8,6 @@ import mongoose from "mongoose";
 const validateModelConfigData = (config) => {
   const errors = [];
 
-  if (!config.apiKey) {
-    errors.push("API key is required");
-  }
 
   if (config.temperature !== undefined) {
     const temp = Number(config.temperature);
@@ -19,21 +16,21 @@ const validateModelConfigData = (config) => {
     }
   }
 
-  if (config.maxTokens !== undefined) {
+  else if (config.maxTokens !== undefined) {
     const tokens = Number(config.maxTokens);
     if (isNaN(tokens) || tokens < 1 || tokens > 32000) {
       errors.push("Max tokens must be between 1 and 32000");
     }
   }
 
-  if (config.topP !== undefined) {
+  else if (config.topP !== undefined) {
     const topP = Number(config.topP);
     if (isNaN(topP) || topP < 0 || topP > 1) {
       errors.push("Top P must be between 0 and 1");
     }
   }
 
-  if (config.frequencyPenalty !== undefined) {
+  else if (config.frequencyPenalty !== undefined) {
     const penalty = Number(config.frequencyPenalty);
     if (isNaN(penalty) || penalty < -2 || penalty > 2) {
       errors.push("Frequency penalty must be between -2 and 2");
@@ -376,6 +373,7 @@ export const updateModelConfig = async (req, res) => {
 
     // Validate update data
     const validationErrors = validateModelConfigData(updateData);
+    console.log(validationErrors)
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,

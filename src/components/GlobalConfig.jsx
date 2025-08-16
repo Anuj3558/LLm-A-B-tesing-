@@ -309,6 +309,7 @@ const GlobalConfig = () => {
   // Update model configuration
   const updateModelConfig = async (modelConfigId, field, value) => {
     const model = adminModels.find(m => m._id === modelConfigId)
+    console.log(field)
     try {
       const response = await fetch(`${API_BASE_URL}/admin/models/${model.modelConfig._id}`, {
         method: 'PUT',
