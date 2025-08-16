@@ -288,10 +288,10 @@ const AdminDashboard = () => {
   .map((activity, index) => (
     <div
       key={index}
-      className="flex items-start space-x-3 p-3 hover:bg-lilly-white rounded-lg transition-colors"
+      className="flex shadow-xl items-start space-x-3 p-3 hover:bg-lilly-white rounded-lg transition-colors"
     >
       {getStatusIcon(activity.status)}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 ">
         <p className="text-sm font-medium text-whale-blue">
           {activity.user}
         </p>

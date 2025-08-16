@@ -4,7 +4,7 @@ import User from "../../models/UserModel.js";
 import bcrypt from "bcryptjs";
 import verifySecretKey from "../../middleware/VerifySecrete.js";
 import { initializeDashboard } from "../../services/dashboardUtils.js";
-import Dashboard from "../../models/Admin/AdminDashboardSchema.js";
+import AdminDashboard from "../../models/Admin/AdminDashboardSchema.js";
 // Function to verify secret key
 
 
@@ -146,13 +146,13 @@ export const addUser = async (req, res) => {
     // Save user to database
     const savedUser = await newUser.save();
     // Update dashboard recent activity for this admin
-    await Dashboard.findOneAndUpdate(
+    await AdminDashboard.findOneAndUpdate(
       { adminId: adminId },
       {
       $push: {
         recentActivity: {
         type: "user_added",
-        user: savedUser.username,
+        user: savedUser.fullName,
         status: "success",
         time: new Date().toDateString(),
         action: `New user '${savedUser.fullName}' added by admin`
@@ -270,13 +270,13 @@ export const toggleUserStatus = async (req, res) => {
     user.isActive = !user.isActive;
     console.log("User status toggled to:", user.isActive);
     await user.save();
-    await Dashboard.findOneAndUpdate(
+    await AdminDashboard.findOneAndUpdate(
       { adminId: adminId },
       {
       $push: {
         recentActivity: {
         type: "user_Updated",
-        user: user.username,
+        user: user.fullName,
         status: "success",
         time: new Date().toDateString(),
         action: `Status Of '${user.fullName}' Updated by admin`
@@ -498,13 +498,13 @@ export const deleteUser = async (req, res) => {
 
     // Delete the user
     await User.findByIdAndDelete(userId);
- await Dashboard.findOneAndUpdate(
+ await AdminDashboard.findOneAndUpdate(
       { adminId: adminId },
       {
       $push: {
         recentActivity: {
         type: "user_Deleted",
-        user: user.username,
+        user: user.fullName,
         status: "success",
         time: new Date().toDateString(),
         action: `User '${user.fullName}' deleted by admin`
@@ -643,13 +643,14 @@ export const getDashboardData = async (req, res) => {
   try {
     // Get the admin ID from the authenticated user
     const adminId = req.user.id;
-
+    console.log("Fetching dashboard data for admin:", adminId);
     // Find the dashboard data for this admin
-    const dashboardData = await Dashboard.findOne({ adminId })
+    const dashboardData = await AdminDashboard.findOne({ adminId })
       .lean()
       .exec();
 
     if (!dashboardData) {
+      console.log("hii")
       return res.status(404).json({ 
         success: false,
         message: 'Dashboard data not found for this admin' 

@@ -1,4 +1,4 @@
-import Dashboard from '../models/Admin/AdminDashboardSchema.js'; // Ensure this path is correct
+import AdminDashboard from '../models/Admin/AdminDashboardSchema.js';
 
 export const initializeDashboard = async (adminId) => {
   const defaultDashboard = {
@@ -39,5 +39,5 @@ export const initializeDashboard = async (adminId) => {
     recentActivity: []
   };
 
-  return await Dashboard.create(defaultDashboard);
+  return await AdminDashboard.create(defaultDashboard);
 };
