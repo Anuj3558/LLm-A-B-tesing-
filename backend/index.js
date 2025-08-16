@@ -6,7 +6,7 @@ import morgan from 'morgan';
 import bodyParser from 'body-parser';
 import connectDB from './connection.js';
 import AdminRouter from './router/Admin/AdminRouter.js';
-import UserRouter from './router/User/UserRouter.js';
+//import UserRouter from './router/User/UserRouter.js';
 import { loginUser } from './services/Auth.js';
 
 // Load env vars
@@ -34,7 +34,7 @@ app.use('/api/auth/login',loginUser)
 // ===== Admin Routes =====
 app.use("/api/admin",AdminRouter);
 // ===== User Routes =====
-app.use("/api/user",UserRouter);
+//app.use("/api/user",UserRouter);
 // ===== Start Server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

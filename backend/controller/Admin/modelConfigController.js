@@ -4,7 +4,7 @@ import {
   updateModelConfigById,
   deleteModelConfigById
 } from "../../services/modelConfigService.js";
-import verifySecretKey from "../../../middleware/VerifySecrete.js";
+import verifySecretKey from "../../middleware/VerifySecrete.js";
 
 export const createConfig = async (req, res) => {
   try {
