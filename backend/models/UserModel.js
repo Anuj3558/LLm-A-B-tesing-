@@ -80,6 +80,7 @@ userSchema.post('save', async function(doc) {
   }
 });
 
-const UserModel = mongoose.model("User", userSchema);
+// Check if model already exists to prevent OverwriteModelError
+const UserModel = mongoose.models.User || mongoose.model("User", userSchema);
 
 export default UserModel;

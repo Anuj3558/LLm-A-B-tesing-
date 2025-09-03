@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Users, MessageSquare, Cpu, Activity, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import { Users, MessageSquare, Cpu, Activity, Clock, CheckCircle, AlertCircle, Server } from "lucide-react"
 import {
   BarChart,
   Bar,
@@ -15,6 +15,7 @@ import {
   AreaChart,
 } from "recharts"
 import { Skeleton } from "antd"
+import { fetchAdminDashboard } from "../app/api/index.js"
 
 export const AdminDashboardSkeleton = () => {
   return (
@@ -49,7 +50,15 @@ const getCookie = (name) => {
     return null
   }
  const getAuthToken = () => {
-    return getCookie('authToken')
+    // First try localStorage (which our API uses)
+    let token = localStorage.getItem('token')
+    
+    // If not found, try cookies as fallback
+    if (!token) {
+      token = getCookie('authToken')
+    }
+    
+    return token
   }
 const getApiHeaders = () => {
     const token = getAuthToken()
@@ -62,35 +71,51 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [dashboardData, setDashboardData] = useState(null)
   const [error, setError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
+
+  // Icon mapping for KPI cards
+  const iconMap = {
+    Users: Users,
+    MessageSquare: MessageSquare,
+    Activity: Activity,
+    Cpu: Cpu,
+    Server: Server
+  }
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null) // Clear previous errors
+      const result = await fetchAdminDashboard()
+      
+      if (result.success) {
+        const finalData = result.data.data
+        console.log("Dashboard data:", finalData)
+        setDashboardData(finalData)
+        setRetryCount(0) // Reset retry count on success
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err)
+      setError("Failed to load dashboard data. Please try again later.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/dashboard`,{
-          headers: getApiHeaders()
-        })
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        
-        const data = await response.json()
-        const finalData = data.data
-        console.log("Dashboard data:", finalData)
-        setDashboardData({
-          finalData
-      })
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err)
-        setError("Failed to load dashboard data. Please try again later.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchDashboardData()
   }, [])
+
+  const handleRetry = () => {
+    if (retryCount < 3) { // Limit retries to prevent infinite loops
+      setRetryCount(prev => prev + 1)
+      fetchDashboardData()
+    } else {
+      setError("Maximum retry attempts reached. Please check your connection and refresh the page manually.")
+    }
+  }
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -114,19 +139,29 @@ const AdminDashboard = () => {
           <AlertCircle className="w-12 h-12 text-crimson mx-auto mb-4" />
           <h3 className="text-lg font-medium text-whale-blue mb-2">Error Loading Dashboard</h3>
           <p className="text-charcoal/70">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-vibrant-blue text-white rounded hover:bg-blue-600 transition-colors"
-          >
-            Retry
-          </button>
+          {retryCount < 3 ? (
+            <button
+              onClick={handleRetry}
+              className="mt-4 px-4 py-2 bg-vibrant-blue text-white rounded hover:bg-blue-600 transition-colors"
+              disabled={loading}
+            >
+              {loading ? 'Retrying...' : `Retry (${retryCount}/3)`}
+            </button>
+          ) : (
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              Refresh Page
+            </button>
+          )}
         </div>
       </div>
     )
   }
 
-  if (!dashboardData) {
-    return null
+  if (!dashboardData || !dashboardData.kpiData) {
+    return <AdminDashboardSkeleton />
   }
 
   return (
@@ -141,8 +176,8 @@ const AdminDashboard = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        { dashboardData.finalData.kpiData.map((kpi, index) => {
-          const Icon = kpi.icon
+        { dashboardData.kpiData?.map((kpi, index) => {
+          const IconComponent = iconMap[kpi.icon] || Users
           console.log("KPI Data:", kpi)
           return (
             <div
@@ -152,7 +187,7 @@ const AdminDashboard = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 rounded-lg bg-${kpi.color}/10 flex items-center justify-center`}>
-                  <Icon className={`w-6 h-6 text-${kpi.color}`} />
+                  <IconComponent className={`w-6 h-6 text-${kpi.color}`} />
                 </div>
                 <span className="text-sm font-medium text-vibrant-teal">
                   {kpi.change}
@@ -236,18 +271,20 @@ const AdminDashboard = () => {
           <h3 className="text-lg font-semibold text-whale-blue mb-4">
             Response Acceptance by Model
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={dashboardData.finalData.responseAcceptanceData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
+          {dashboardData.responseAcceptanceData && dashboardData.responseAcceptanceData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={dashboardData.responseAcceptanceData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
                 paddingAngle={5}
                 dataKey="value"
               >
-                {dashboardData.finalData.responseAcceptanceData.map((entry, index) => (
+                {dashboardData.responseAcceptanceData?.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -262,7 +299,7 @@ const AdminDashboard = () => {
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            {dashboardData.finalData.responseAcceptanceData.map((item, index) => (
+            {dashboardData.responseAcceptanceData?.map((item, index) => (
               <div key={index} className="flex items-center">
                 <div 
                   className="w-3 h-3 rounded-full mr-2" 
@@ -274,6 +311,12 @@ const AdminDashboard = () => {
               </div>
             ))}
           </div>
+          </>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              <p>No response acceptance data available</p>
+            </div>
+          )}
         </div>
 
         {/* Recent Activity */}
@@ -282,10 +325,11 @@ const AdminDashboard = () => {
             Recent Activity
           </h3>
           <div className="space-y-4">
-            {dashboardData.finalData.recentActivity
-  .slice(-5) // Take last 5 elements
-  .reverse() // Reverse to show in descending order (newest first)
-  .map((activity, index) => (
+            {dashboardData.recentActivity && dashboardData.recentActivity.length > 0 ? (
+              dashboardData.recentActivity
+                .slice(-5) // Take last 5 elements
+                .reverse() // Reverse to show in descending order (newest first)
+                .map((activity, index) => (
     <div
       key={index}
       className="flex items-start space-x-3 p-3 hover:bg-lilly-white rounded-lg transition-colors"
@@ -303,7 +347,12 @@ const AdminDashboard = () => {
         </p>
       </div>
     </div>
-  ))}
+  ))
+            ) : (
+              <div className="flex items-center justify-center h-32 text-gray-500">
+                <p>No recent activity</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

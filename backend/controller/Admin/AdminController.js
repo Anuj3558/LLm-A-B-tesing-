@@ -3,7 +3,7 @@ import Admin from "../../models/AdminModel.js";
 import User from "../../models/UserModel.js";
 import bcrypt from "bcryptjs";
 import verifySecretKey from "../../middleware/VerifySecrete.js";
-import { initializeDashboard } from "../../services/dashboardUtils.js";
+import { initializeDashboard, ensureAdminDashboard, triggerAdminDashboardUpdate } from "../../services/dashboardUtils.js";
 import Dashboard from "../../models/Admin/AdminDashboardSchema.js";
 // Function to verify secret key
 
@@ -161,6 +161,18 @@ export const addUser = async (req, res) => {
       }
     );
 
+    // Trigger admin dashboard update
+    try {
+      await triggerAdminDashboardUpdate(adminId, 'USER_CREATED', {
+        username: savedUser.username,
+        fullName: savedUser.fullName,
+        email: savedUser.email
+      });
+    } catch (dashboardError) {
+      console.error('Error updating admin dashboard:', dashboardError);
+      // Don't fail the user creation if dashboard update fails
+    }
+
     // Return success response (excluding password)
     res.status(201).json({
       message: "User created successfully",
@@ -270,6 +282,8 @@ export const toggleUserStatus = async (req, res) => {
     user.isActive = !user.isActive;
     console.log("User status toggled to:", user.isActive);
     await user.save();
+    
+    // Update admin dashboard with activity and trigger update
     await Dashboard.findOneAndUpdate(
       { adminId: adminId },
       {
@@ -284,6 +298,18 @@ export const toggleUserStatus = async (req, res) => {
       }
       }
     );
+    
+    // Trigger additional dashboard updates
+    try {
+      await triggerAdminDashboardUpdate(adminId, 'USER_STATUS_CHANGED', {
+        username: user.username,
+        isActive: user.isActive
+      });
+    } catch (dashboardError) {
+      console.error('Error updating admin dashboard:', dashboardError);
+      // Don't fail the operation if dashboard update fails
+    }
+    
     res.status(200).json({
       message: `User ${user.isActive ? 'activated' : 'deactivated'} successfully`,
       user: {
@@ -644,25 +670,19 @@ export const getDashboardData = async (req, res) => {
     // Get the admin ID from the authenticated user
     const adminId = req.user.id;
 
-    // Find the dashboard data for this admin
-    const dashboardData = await Dashboard.findOne({ adminId })
-      .lean()
-      .exec();
+    // Ensure dashboard exists (creates if missing)
+    const dashboardData = await ensureAdminDashboard(adminId);
 
-    if (!dashboardData) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Dashboard data not found for this admin' 
-      });
-    }
     console.log("Dashboard data fetched for admin:", dashboardData);
+    
     // Return the dashboard data
     res.status(200).json({
       success: true,
-      data:dashboardData });
+      data: dashboardData 
+    });
 
   } catch (error) {
-    console.error('Error fetching dashboard data:', error);
+    console.error('Error fetching/creating dashboard data:', error);
     res.status(500).json({ 
       success: false,
       message: 'Failed to fetch dashboard data',

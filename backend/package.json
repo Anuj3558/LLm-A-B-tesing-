@@ -6,20 +6,28 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:dashboard": "node test/dashboard-crud-test.js",
+    "cleanup:dashboards": "node test/cleanup-dashboards.js",
+    "create:admin": "node test/create-admin.js"
   },
   "author": "",
   "license": "ISC",
   "keywords": [],
   "description": "",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.61.0",
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "groq-sdk": "^0.31.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "openai": "^5.18.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

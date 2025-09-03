@@ -7,6 +7,8 @@ import AdminLayout from "./components/AdminLayout"
 import UserLayout from "./components/UserLayout"
 import AdminDashboard from "./components/AdminDashboard"
 import UserManagement from "./components/UserManagement"
+import ProviderManagement from "./components/ProviderManagement"
+import LLMConfiguration from "./components/LLMConfiguration"
 import GlobalConfig from "./components/GlobalConfig"
 import ModelPerformance from "./components/ModelPerformance"
 import UserDashboard from "./components/UserDashboard"
@@ -36,7 +38,9 @@ function App() {
   const logout = () => {
     setUser(null)
     localStorage.removeItem("user")
-    
+    localStorage.removeItem("token")
+    // Also clear cookies
+    document.cookie = "authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
   }
 
   if (loading) {
@@ -68,6 +72,8 @@ function App() {
             <Route index element={<Navigate to="/admin/dashboard" />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="providers" element={<ProviderManagement />} />
+            <Route path="llm-config" element={<LLMConfiguration />} />
             <Route path="config" element={<GlobalConfig />} />
             <Route path="models" element={<ModelPerformance />} />
           </Route>
@@ -80,7 +86,7 @@ function App() {
             }
           >
             <Route index element={<Navigate to="/user/dashboard" />} />
-            <Route path="dashboard" element={<UserDashboard />} />
+            <Route path="dashboard" element={<UserDashboard userId={user?.id} />} />
             <Route path="test" element={<PromptTesting />} />
             <Route path="history" element={<PromptHistory />} />
             <Route path="settings" element={<UserSettings />} />

@@ -7,6 +7,8 @@ import bodyParser from 'body-parser';
 import connectDB from './connection.js';
 import AdminRouter from './router/Admin/AdminRouter.js';
 import UserRouter from './router/User/UserRouter.js';
+import llmTestingRoutes from './routes/llmTesting.js';
+import promptHistoryRoutes from './routes/promptHistory.js';
 import { loginUser } from './services/Auth.js';
 
 // Load env vars
@@ -35,6 +37,10 @@ app.use('/api/auth/login',loginUser)
 app.use("/api/admin",AdminRouter);
 // ===== User Routes =====
 app.use("/api/user",UserRouter);
+// ===== LLM Testing Routes =====
+app.use("/api/llm",llmTestingRoutes);
+// ===== Prompt History Routes =====
+app.use("/api/prompt-history",promptHistoryRoutes);
 // ===== Start Server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

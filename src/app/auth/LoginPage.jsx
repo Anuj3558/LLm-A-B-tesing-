@@ -58,6 +58,11 @@ const getCookie = (name) => {
 
 const deleteCookie = (name) => {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+  // Also remove from localStorage and user data if it's the auth token
+  if (name === 'authToken') {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }
 }
 
 const LoginPage = ({ onLogin }) => {
@@ -71,7 +76,8 @@ const LoginPage = ({ onLogin }) => {
   useEffect(() => {
     const checkExistingToken = async () => {
       try {
-        const token = getCookie('authToken')
+        // Check both localStorage and cookies for token
+        let token = localStorage.getItem('token') || getCookie('authToken')
         
         if (token) {
           toast.info('Validating existing session...', {
@@ -81,14 +87,36 @@ const LoginPage = ({ onLogin }) => {
           const response = await validateTokenAPI(token)
           
           if (response.valid && response.user) {
+            // Ensure token is stored in both places
+            setCookie('authToken', token, 7)
+            localStorage.setItem('token', token)
+            
+            // Create user object with role information
+            const userWithRole = {
+              ...response.user,
+              role: response.user.role || 'admin'
+            }
+            
+            // Store user data for App.jsx routing
+            localStorage.setItem('user', JSON.stringify(userWithRole))
+            
             toast.success(`Authentication successful. Redirecting...`, {
               autoClose: 3000,
             })
 
-            // Navigate based on role
+            // Call onLogin and navigate
+            if (onLogin) {
+              onLogin(userWithRole)
+            }
+            
+            setTimeout(() => {
+              window.location.href = userWithRole.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'
+            }, 1500)
           } else {
-            // Invalid token, remove it
+            // Invalid token, remove it from both places
             deleteCookie('authToken')
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
             toast.warn('Session expired. Please login again.', {
               autoClose: 3000,
             })
@@ -97,6 +125,8 @@ const LoginPage = ({ onLogin }) => {
       } catch (error) {
         console.error('Token validation error:', error)
         deleteCookie('authToken')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
         toast.error('Failed to validate session. Please login.', {
           autoClose: 3000,
         })
@@ -116,23 +146,33 @@ const LoginPage = ({ onLogin }) => {
       const response = await loginAPI(email, password)
       console.log('Login response:', response)
       if (response.token && response.message === 'Login successful') {
-        // Store token in cookies
+        // Store token in both cookies and localStorage for compatibility
         setCookie('authToken', response.token, 7) // 7 days expiry
+        localStorage.setItem('token', response.token) // For API compatibility
+        
+        // Create user object with role information
+        const userWithRole = {
+          ...response.user,
+          role: response.user.role || 'admin' // Default to admin if role not specified
+        }
+        
+        // Store user data for App.jsx routing
+        localStorage.setItem('user', JSON.stringify(userWithRole))
         
         // Show success notification
-        toast.success(`Welcome back, ${response.user?.username || response.user?.email || 'User'}!`, {
+        toast.success(`Welcome back, ${userWithRole.username || userWithRole.email || 'User'}!`, {
           autoClose: 3000,
         })
 
         // Call onLogin prop if provided
         if (onLogin) {
-          onLogin(response.user)
+          onLogin(userWithRole)
         }
 
-        // Navigate based on role
+        // Navigate based on role with a slight delay to prevent race conditions
         setTimeout(() => {
-          // Your navigation logic here
-        }, 1000)
+          window.location.href = userWithRole.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'
+        }, 1500)
       } else {
         throw new Error(response?.message || 'Invalid credentials. Please try again.')
       }

@@ -24,7 +24,7 @@ const UserDashboard = ({ userId }) => {
     console.log(userId)
     const fetchDashboard = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dashboards/user/${userId}`)
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/dashboards/user/${userId}`)
         if (!res.ok) throw new Error("Failed to fetch dashboard data")
         const data = await res.json()
         setDashboardData(data)

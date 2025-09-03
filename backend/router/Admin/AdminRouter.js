@@ -22,6 +22,9 @@ import {
   deleteConfig
 } from "../../controller/Admin/modelConfigController.js";
 
+// Import admin dashboard routes
+import AdminDashboard from "./AdminDashboard.js";
+
 // Define your routes here
 AdminRouter.post("/add", addAdmin);
 AdminRouter.get("/usernames", getAllAdminUsernames);
@@ -36,6 +39,10 @@ AdminRouter.get("/model-configs", validateToken, getConfigs);
 AdminRouter.put("/model-config/:id", validateToken, updateConfig);
 AdminRouter.delete("/model-config/:id", validateToken, deleteConfig);
 
-AdminRouter.get("/dashboard",validateToken,getDashboardData) // Assuming you have an addUser function
+AdminRouter.get("/dashboard",validateToken,getDashboardData) // Legacy route for backward compatibility
+
+// Admin Dashboard CRUD routes
+AdminRouter.use("/dashboards", validateToken, AdminDashboard);
+
 // Export the router
 export default AdminRouter;

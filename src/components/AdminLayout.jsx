@@ -1,6 +1,6 @@
 "use client"
 import { Outlet, Link, useLocation } from "react-router-dom"
-import { LayoutDashboard, Users, Settings, BarChart3, LogOut, Menu, X } from "lucide-react"
+import { LayoutDashboard, Users, Settings, BarChart3, LogOut, Menu, X, Key, Server } from "lucide-react"
 import { useState } from "react"
 
 const AdminLayout = ({ user, onLogout }) => {
@@ -10,6 +10,8 @@ const AdminLayout = ({ user, onLogout }) => {
   const navigation = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "User Management", href: "/admin/users", icon: Users },
+    { name: "Provider Management", href: "/admin/providers", icon: Server },
+    { name: "LLM Configuration", href: "/admin/llm-config", icon: Key },
     { name: "Global Config", href: "/admin/config", icon: Settings },
     { name: "Model Performance", href: "/admin/models", icon: BarChart3 },
   ]

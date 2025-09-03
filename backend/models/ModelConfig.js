@@ -37,5 +37,6 @@ const modelConfigSchema = new Schema({
   },
 }, { timestamps: true });
 
-const ModelConfig = mongoose.model('ModelConfig', modelConfigSchema);
+// Check if model already exists to prevent OverwriteModelError
+const ModelConfig = mongoose.models.ModelConfig || mongoose.model('ModelConfig', modelConfigSchema);
 export default ModelConfig;

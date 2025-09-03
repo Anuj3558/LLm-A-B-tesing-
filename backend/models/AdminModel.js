@@ -23,6 +23,7 @@ const adminSchema = new Schema(
   { timestamps: true }
 );
 
-const Admin = mongoose.model("Admin", adminSchema);
+// Check if model already exists to prevent OverwriteModelError
+const Admin = mongoose.models.Admin || mongoose.model("Admin", adminSchema);
 
 export default Admin;

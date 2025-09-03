@@ -43,6 +43,7 @@ const dashboardSchema = new Schema({
   recentActivity: [recentActivitySchema]
 }, { timestamps: true });
 
-const AdminDashboard = mongoose.model('AdminDashboard', dashboardSchema);
+// Check if model already exists to prevent OverwriteModelError
+const AdminDashboard = mongoose.models.AdminDashboard || mongoose.model('AdminDashboard', dashboardSchema);
 
 export default AdminDashboard;
