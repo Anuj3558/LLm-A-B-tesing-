@@ -163,6 +163,32 @@ export const toggleUserStatus = async (userId) => {
   }
 };
 
+// Update allowed models for a user (Admin only)
+export const updateUserAllowedModels = async (userId, modelIds) => {
+  try {
+    const response = await api.post(`/admin/update-allowed-models/${userId}`, { modelIds });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || 'Failed to update user model access' 
+    };
+  }
+};
+
+// Get all models available to admin
+export const getAllAdminModels = async () => {
+  try {
+    const response = await api.get('/admin/get-all-models');
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || 'Failed to fetch admin models' 
+    };
+  }
+};
+
 // ===== USER DASHBOARD FUNCTIONS =====
 export const fetchUserDashboard = async (userId) => {
   try {
@@ -208,6 +234,32 @@ export const updateUserPreferences = async (userId, preferences) => {
     return { 
       success: false, 
       error: error.response?.data?.message || 'Failed to update preferences' 
+    };
+  }
+};
+
+// Get user's allowed models
+export const getUserAllowedModels = async () => {
+  try {
+    const response = await api.get('/user/allowed-models');
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || 'Failed to fetch user allowed models' 
+    };
+  }
+};
+
+// Get user profile with model access
+export const getUserProfile = async () => {
+  try {
+    const response = await api.get('/user/profile');
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || 'Failed to fetch user profile' 
     };
   }
 };

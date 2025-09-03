@@ -36,7 +36,11 @@ const userSchema = new Schema(
     },
     lastLogin: {
       type: Date
-    }
+    },
+    allowedModels: [{
+      type: String,
+      default: []
+    }]
   },
   { timestamps: true }
 );

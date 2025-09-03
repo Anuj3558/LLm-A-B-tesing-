@@ -1,6 +1,7 @@
 // controllers/adminController.js
 import Admin from "../../models/AdminModel.js";
 import User from "../../models/UserModel.js";
+import ModelConfig from "../../models/ModelConfig.js";
 import bcrypt from "bcryptjs";
 import verifySecretKey from "../../middleware/VerifySecrete.js";
 import { initializeDashboard, ensureAdminDashboard, triggerAdminDashboardUpdate } from "../../services/dashboardUtils.js";
@@ -241,6 +242,7 @@ export const getAllUsers = async (req, res) => {
         role: user.role,
         isActive: user.isActive,
         adminId: user.adminId,
+        allowedModels: user.allowedModels || [],
         lastLogin: user.lastLogin,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
@@ -686,6 +688,134 @@ export const getDashboardData = async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to fetch dashboard data',
+      error: error.message 
+    });
+  }
+};
+
+// Update allowed models for a user
+export const updateAllowedModels = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { modelIds } = req.body;
+    const adminId = req.user.id; // Admin ID from authenticated user
+
+    console.log("Updating allowed models for user:", userId, "by admin:", adminId);
+
+    // Validate input
+    if (!Array.isArray(modelIds)) {
+      return res.status(400).json({ 
+        message: "modelIds must be an array" 
+      });
+    }
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        message: "User not found" 
+      });
+    }
+
+    // Verify that this user belongs to the admin
+    if (user.adminId.toString() !== adminId) {
+      return res.status(403).json({ 
+        message: "You can only manage your own users" 
+      });
+    }
+
+    // Verify that all provided model IDs exist for this admin
+    const adminModels = await ModelConfig.find({ 
+      adminId, 
+      _id: { $in: modelIds.filter(id => id) } // Filter out empty strings
+    });
+
+    const validModelIds = adminModels.map(model => model._id.toString());
+    const invalidModelIds = modelIds.filter(id => id && !validModelIds.includes(id));
+
+    if (invalidModelIds.length > 0) {
+      return res.status(400).json({
+        message: "Some model IDs are invalid or don't belong to your admin account",
+        invalidIds: invalidModelIds
+      });
+    }
+
+    // Update user's allowed models
+    user.allowedModels = modelIds.filter(id => id); // Remove empty strings
+    await user.save();
+
+    // Update dashboard activity
+    await Dashboard.findOneAndUpdate(
+      { adminId: adminId },
+      {
+        $push: {
+          recentActivity: {
+            type: "model_access_updated",
+            user: user.username,
+            status: "success",
+            time: new Date().toDateString(),
+            action: `Model access updated for '${user.fullName || user.username}'`
+          }
+        }
+      }
+    );
+
+    res.status(200).json({
+      message: "User model access updated successfully",
+      user: {
+        id: user._id,
+        username: user.username,
+        allowedModels: user.allowedModels
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating allowed models:", error);
+    res.status(500).json({ 
+      message: "Server error", 
+      error: error.message 
+    });
+  }
+};
+
+// Get all models available to an admin
+export const getAllModels = async (req, res) => {
+  try {
+    const adminId = req.user.id; // Admin ID from authenticated user
+
+    console.log("Fetching all models for admin:", adminId);
+
+    // Verify that the admin exists
+    const admin = await Admin.findById(adminId);
+    if (!admin) {
+      return res.status(404).json({ 
+        message: "Admin not found" 
+      });
+    }
+
+    // Get all model configurations for this admin
+    const models = await ModelConfig.find({ adminId }).select('_id providerId modelId parameters createdAt');
+
+    // Format the response
+    const formattedModels = models.map(model => ({
+      id: model._id,
+      name: `${model.providerId}-${model.modelId}`,
+      providerId: model.providerId,
+      modelId: model.modelId,
+      description: `${model.providerId.toUpperCase()} ${model.modelId}`,
+      parameters: model.parameters,
+      createdAt: model.createdAt
+    }));
+
+    res.status(200).json({
+      message: "Models fetched successfully",
+      models: formattedModels
+    });
+
+  } catch (error) {
+    console.error("Error fetching models:", error);
+    res.status(500).json({ 
+      message: "Server error", 
       error: error.message 
     });
   }

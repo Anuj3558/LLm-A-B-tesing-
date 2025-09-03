@@ -2,6 +2,8 @@
 import express from 'express';
 import { testPromptWithModels, getAvailableModels, validateApiKeys } from '../services/llmService.js';
 import authenticateToken from '../middleware/authMiddleware.js';
+import User from '../models/UserModel.js';
+import ModelConfig from '../models/ModelConfig.js';
 
 const router = express.Router();
 
@@ -22,6 +24,42 @@ router.post('/test-prompt', authenticateToken, async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Model IDs are required and must be a non-empty array',
+      });
+    }
+
+    // Validate that user has access to the requested models
+    const user = await User.findById(userId).select('allowedModels adminId');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    // Check if user has any allowed models
+    if (!user.allowedModels || user.allowedModels.length === 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'No model access granted. Contact your administrator.',
+      });
+    }
+
+    // Get user's allowed model configs to validate against modelIds
+    const userAllowedModelConfigs = await ModelConfig.find({
+      _id: { $in: user.allowedModels },
+      adminId: user.adminId
+    });
+
+    const allowedModelIds = new Set(userAllowedModelConfigs.map(m => m._id.toString()));
+    
+    // Validate that all requested modelIds are in user's allowed list
+    const unauthorizedModels = modelIds.filter(id => !allowedModelIds.has(id));
+    if (unauthorizedModels.length > 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied to some models',
+        unauthorizedModels,
+        message: 'You can only test with models you have been granted access to.',
       });
     }
 
@@ -68,21 +106,69 @@ router.post('/test-prompt', authenticateToken, async (req, res) => {
   }
 });
 
-// Get available models
+// Get available models (filtered by user permissions)
 router.get('/models', authenticateToken, async (req, res) => {
   try {
-    const models = await getAvailableModels();
+    const userId = req.user.id;
+    
+    // Get user's allowed models
+    const user = await User.findById(userId).select('allowedModels adminId');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    // If user has no allowed models, return empty array
+    if (!user.allowedModels || user.allowedModels.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          models: [],
+          apiKeyStatus: {},
+          apiKeyDetails: {},
+          totalModels: 0,
+          availableProviders: [],
+          configuredInDatabase: 0,
+          message: 'No models available. Contact your administrator to get model access.'
+        },
+      });
+    }
+
+    // Get all available models
+    const allModels = await getAvailableModels();
+    
+    // Filter models to only include those the user is allowed to access
+    const userAllowedModelConfigs = await ModelConfig.find({
+      _id: { $in: user.allowedModels },
+      adminId: user.adminId
+    });
+
+    // Create a map of allowed model IDs for quick lookup
+    const allowedModelIds = new Set(userAllowedModelConfigs.map(m => m._id.toString()));
+    
+    // Filter the available models to only include allowed ones
+    const filteredModels = allModels.filter(model => {
+      // For database-sourced models, check if the model ID is in user's allowed list
+      if (model.source === 'database' && model.configId) {
+        return allowedModelIds.has(model.configId.toString());
+      }
+      return false; // Don't include non-database models for security
+    });
+
     const apiKeyStatus = await validateApiKeys();
 
     res.json({
       success: true,
       data: {
-        models,
+        models: filteredModels,
         apiKeyStatus: apiKeyStatus.combined,
         apiKeyDetails: apiKeyStatus,
-        totalModels: models.length,
+        totalModels: filteredModels.length,
         availableProviders: Object.keys(apiKeyStatus.combined).filter(key => apiKeyStatus.combined[key]),
-        configuredInDatabase: models.filter(m => m.source === 'database').length,
+        configuredInDatabase: filteredModels.filter(m => m.source === 'database').length,
+        userAllowedModels: user.allowedModels.length,
       },
     });
   } catch (error) {

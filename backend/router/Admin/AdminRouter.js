@@ -11,7 +11,9 @@ import {
     getAllAdminUsernames,
     getAllUsers,
     getDashboardData,
-    toggleUserStatus
+    toggleUserStatus,
+    updateAllowedModels,
+    getAllModels
 } from "../../controller/Admin/AdminController.js";
 import { validateToken } from "../../middleware/ValidateToken.js";
 
@@ -32,6 +34,8 @@ AdminRouter.get("/get-all-users",validateToken,getAllUsers);
 AdminRouter.post("/add-user", validateToken, addUser);
 AdminRouter.patch("/toggle-status/:id",validateToken,toggleUserStatus)
 AdminRouter.delete("/delete-user/:userId",validateToken,deleteUser)
+AdminRouter.post("/update-allowed-models/:userId", validateToken, updateAllowedModels);
+AdminRouter.get("/get-all-models", validateToken, getAllModels);
 
 // Model Config routes
 AdminRouter.post("/model-config", validateToken, createConfig);
