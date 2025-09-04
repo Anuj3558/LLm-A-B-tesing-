@@ -8,7 +8,6 @@ import mongoose from "mongoose";
 const validateModelConfigData = (config) => {
   const errors = [];
 
-
   if (config.temperature !== undefined) {
     const temp = Number(config.temperature);
     if (isNaN(temp) || temp < 0 || temp > 2) {
@@ -16,21 +15,21 @@ const validateModelConfigData = (config) => {
     }
   }
 
-  else if (config.maxTokens !== undefined) {
+  if (config.maxTokens !== undefined) {
     const tokens = Number(config.maxTokens);
     if (isNaN(tokens) || tokens < 1 || tokens > 32000) {
       errors.push("Max tokens must be between 1 and 32000");
     }
   }
 
-  else if (config.topP !== undefined) {
+  if (config.topP !== undefined) {
     const topP = Number(config.topP);
     if (isNaN(topP) || topP < 0 || topP > 1) {
       errors.push("Top P must be between 0 and 1");
     }
   }
 
-  else if (config.frequencyPenalty !== undefined) {
+  if (config.frequencyPenalty !== undefined) {
     const penalty = Number(config.frequencyPenalty);
     if (isNaN(penalty) || penalty < -2 || penalty > 2) {
       errors.push("Frequency penalty must be between -2 and 2");
@@ -77,10 +76,10 @@ export const AddAdminModelConfig = async (req, res) => {
     const adminId = req.user.id;
 
     // Validate required fields
-    if (!modelId || !config) {
+    if (!modelId || !config ) {
       return res.status(400).json({
         success: false,
-        message: "ModelId and config are required"
+        message: "ModelId, config, and apiKey are required"
       });
     }
 
@@ -105,88 +104,64 @@ export const AddAdminModelConfig = async (req, res) => {
 
     // Check if this specific model already exists for this admin
     const existingGlobalConfig = await GlobalConfig.findOne({
-      adminId: adminId
-    }).populate({
-      path: 'modelConfigId',
-      match: { modelId: modelId }
+      adminId: adminId,
+      modelId: modelId
     });
 
-    // Check if the model already exists in the modelConfigId array
-    if (existingGlobalConfig && existingGlobalConfig.modelConfigId.length > 0) {
-      const modelExists = existingGlobalConfig.modelConfigId.some(
-        modelConfig => modelConfig && modelConfig.modelId.toString() === modelId.toString()
-      );
-      
-      if (modelExists) {
-        return res.status(409).json({
-          success: false,
-          message: "Model configuration already exists for this admin"
-        });
-      }
+    if (existingGlobalConfig) {
+      return res.status(409).json({
+        success: false,
+        message: "Model configuration already exists for this admin"
+      });
     }
 
     // Create ModelConfig document
     const modelConfig = new ModelConfig({
-      modelId: modelId,
-      apiKey: config.apiKey,
       temperature: config.temperature || 0.7,
       maxTokens: config.maxTokens || 2048,
       topP: config.topP || 1,
       frequencyPenalty: config.frequencyPenalty || 0,
-      presencePenalty: config.presencePenalty || 0,
-      isActive: config.isActive !== undefined ? config.isActive : true
+      presencePenalty: config.presencePenalty || 0
     });
 
     const savedModelConfig = await modelConfig.save();
 
-    // Check if GlobalConfig already exists for this admin
-    let globalConfig = await GlobalConfig.findOne({ adminId: adminId });
-    
-    if (globalConfig) {
-      // Add the new modelConfigId to the existing array
-      globalConfig.modelConfigId.push(savedModelConfig._id);
-      await globalConfig.save();
+    // Handle PlatformConfig
+    let platformConfigId;
+    const existingPlatformConfig = await PlatformConfig.findOne({});
+
+    if (existingPlatformConfig) {
+      platformConfigId = existingPlatformConfig._id;
     } else {
-      // Handle PlatformConfig
-      let platformConfigId;
-      const existingPlatformConfig = await PlatformConfig.findOne({});
-
-      if (existingPlatformConfig) {
-        platformConfigId = existingPlatformConfig._id;
-      } else {
-        const platformConfig = new PlatformConfig({
-          defaultTimeout: config.platformConfig?.defaultTimeout || 30,
-          maxConcurrentRequests: config.platformConfig?.maxConcurrentRequests || 10,
-          rateLimitPerUser: config.platformConfig?.rateLimitPerUser || 100,
-          enableLogging: config.platformConfig?.enableLogging !== undefined ? config.platformConfig.enableLogging : true,
-          enableAnalytics: config.platformConfig?.enableAnalytics !== undefined ? config.platformConfig.enableAnalytics : true
-        });
-
-        const savedPlatformConfig = await platformConfig.save();
-        platformConfigId = savedPlatformConfig._id;
-      }
-
-      // Create new GlobalConfig document
-      globalConfig = new GlobalConfig({
-        adminId: adminId,
-        modelConfigId: [savedModelConfig._id],
-        platformConfigId: platformConfigId,
-        isActive: true
+      const platformConfig = new PlatformConfig({
+        defaultTimeout: config.platformConfig?.defaultTimeout || 30,
+        maxConcurrentRequests: config.platformConfig?.maxConcurrentRequests || 10,
+        rateLimitPerUser: config.platformConfig?.rateLimitPerUser || 100,
+        enableLogging: config.platformConfig?.enableLogging !== undefined ? config.platformConfig.enableLogging : true,
+        enableAnalytics: config.platformConfig?.enableAnalytics !== undefined ? config.platformConfig.enableAnalytics : true
       });
 
-      await globalConfig.save();
+      const savedPlatformConfig = await platformConfig.save();
+      platformConfigId = savedPlatformConfig._id;
     }
+    console.log(config.apiKey)
+    // Create new GlobalConfig document
+    const globalConfig = new GlobalConfig({
+      adminId: adminId,
+      modelId: modelId,
+      apiKey: config.apiKey,
+      modelConfigId: savedModelConfig._id,
+      platformConfigId: platformConfigId,
+      Enabled: config.Enabled !== undefined ? config.Enabled : true
+    });
+
+    await globalConfig.save();
 
     // Populate the response with related data
     const populatedConfig = await GlobalConfig.findById(globalConfig._id)
-      .populate({
-        path: 'modelConfigId',
-        populate: {
-          path: 'modelId',
-          model: 'AllModels'
-        }
-      })
+      .populate('modelId')
       .populate('platformConfigId')
+      .populate('modelConfigId')
       .populate('adminId');
 
     // Update admin dashboard
@@ -202,7 +177,6 @@ export const AddAdminModelConfig = async (req, res) => {
   } catch (error) {
     console.error("Error adding model configuration:", error);
     
-    // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -211,7 +185,6 @@ export const AddAdminModelConfig = async (req, res) => {
       });
     }
 
-    // Handle duplicate key errors
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -232,15 +205,9 @@ export const GetAllAdminModelsRaw = async (req, res) => {
     const adminId = req.user.id;
 
     const adminModels = await GlobalConfig.find({ adminId: adminId })
-      .populate({
-        path: 'modelConfigId',
-        populate: {
-          path: 'modelId',
-          model: 'AllModels',
-          select: 'name description provider category'
-        }
-      })
+      .populate('modelId')
       .populate('platformConfigId')
+      .populate('modelConfigId')
       .populate('adminId', 'name email')
       .sort({ createdAt: -1 });
 
@@ -251,43 +218,19 @@ export const GetAllAdminModelsRaw = async (req, res) => {
       });
     }
 
-    // Transform the data to handle array of modelConfigId
-    const transformedData = [];
-    
-    adminModels.forEach(config => {
-      config.modelConfigId.forEach(modelConfig => {
-        if (modelConfig && modelConfig.modelId) {
-          transformedData.push({
-            _id: config._id,
-            globalConfigId: config._id,
-            adminId: config.adminId,
-            isActive: config.isActive,
-            createdAt: config.createdAt,
-            updatedAt: config.updatedAt,
-            model: {
-              _id: modelConfig.modelId._id,
-              name: modelConfig.modelId.name,
-              description: modelConfig.modelId.description,
-              provider: modelConfig.modelId.provider,
-              category: modelConfig.modelId.category
-            },
-            modelConfig: {
-              _id: modelConfig._id,
-              apiKey: modelConfig.apiKey,
-              temperature: modelConfig.temperature,
-              maxTokens: modelConfig.maxTokens,
-              topP: modelConfig.topP,
-              frequencyPenalty: modelConfig.frequencyPenalty,
-              presencePenalty: modelConfig.presencePenalty,
-              isActive: modelConfig.isActive,
-              createdAt: modelConfig.createdAt,
-              updatedAt: modelConfig.updatedAt
-            },
-            platformConfig: config.platformConfigId
-          });
-        }
-      });
-    });
+    // Transform the data
+    const transformedData = adminModels.map(config => ({
+      _id: config._id,
+      globalConfigId: config._id,
+      adminId: config.adminId,
+      Enabled: config.Enabled,
+      createdAt: config.createdAt,
+      updatedAt: config.updatedAt,
+      model: config.modelId,
+      modelConfig: config.modelConfigId,
+      platformConfig: config.platformConfigId,
+      apiKey: config.apiKey
+    }));
 
     res.status(200).json({
       success: true,
@@ -337,32 +280,25 @@ export const getAllModel = async (req, res) => {
 // Update Model Configuration
 export const updateModelConfig = async (req, res) => {
   try {
-    const { modelConfigId } = req.params;
+    const { globalConfigId } = req.params;
     const updateData = req.body;
     const adminId = req.user.id;
-   console.log(modelConfigId)
-    // Validate modelConfigId
-    if (!modelConfigId) {
+    
+    console.log("Update request received:", { globalConfigId, updateData });
+
+    // Validate globalConfigId
+    if (!globalConfigId) {
       return res.status(400).json({
         success: false,
-        message: "Model configuration ID is required",
-      });
-    }
-
-    // Find the model configuration and verify ownership
-    const modelConfig = await ModelConfig.findById(modelConfigId).populate('modelId');
-    if (!modelConfig) {
-      return res.status(404).json({
-        success: false,
-        message: "Model configuration not found",
+        message: "Global configuration ID is required",
       });
     }
 
     // Verify admin owns this configuration
     const globalConfig = await GlobalConfig.findOne({
-      adminId: adminId,
-      modelConfigId: modelConfigId
-    });
+      _id: globalConfigId,
+      adminId: adminId
+    }).populate('modelId').populate('modelConfigId');
 
     if (!globalConfig) {
       return res.status(403).json({
@@ -371,9 +307,39 @@ export const updateModelConfig = async (req, res) => {
       });
     }
 
-    // Validate update data
-    const validationErrors = validateModelConfigData(updateData);
-    console.log(validationErrors)
+    // Separate API key updates from model config updates
+    let apiKeyUpdated = false;
+    let modelConfigUpdated = false;
+    const modelConfigUpdateData = {};
+    const validationErrors = [];
+
+    // Handle API key update
+    if (updateData.apiKey !== undefined) {
+      if (typeof updateData.apiKey !== 'string' || updateData.apiKey.trim() === '') {
+        validationErrors.push("API key must be a non-empty string");
+      } else {
+        globalConfig.apiKey = updateData.apiKey;
+        apiKeyUpdated = true;
+      }
+    }
+
+    // Handle model configuration updates
+    const modelConfigFields = ['temperature', 'maxTokens', 'topP', 'frequencyPenalty', 'presencePenalty'];
+    
+    for (const [key, value] of Object.entries(updateData)) {
+      if (modelConfigFields.includes(key)) {
+        // Validate model config fields
+        const fieldValidation = validateModelConfigData({ [key]: value });
+        if (fieldValidation.length > 0) {
+          validationErrors.push(...fieldValidation);
+        } else {
+          modelConfigUpdateData[key] = value;
+          modelConfigUpdated = true;
+        }
+      }
+    }
+
+    // Return validation errors if any
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
@@ -382,54 +348,111 @@ export const updateModelConfig = async (req, res) => {
       });
     }
 
-    // Define allowed fields for update
-    const allowedFields = [
-      'apiKey',
-      'temperature',
-      'maxTokens',
-      'topP',
-      'frequencyPenalty',
-      'presencePenalty',
-      'isActive'
-    ];
-
-    // Filter update data
-    const filteredUpdateData = {};
-    for (const [key, value] of Object.entries(updateData)) {
-      if (allowedFields.includes(key)) {
-        filteredUpdateData[key] = value;
-      }
-    }
-
     // Check if there's any valid data to update
-    if (Object.keys(filteredUpdateData).length === 0) {
+    if (!apiKeyUpdated && Object.keys(modelConfigUpdateData).length === 0) {
       return res.status(400).json({
         success: false,
         message: "No valid fields provided for update",
       });
     }
 
-    // Update the model configuration
-    const updatedModelConfig = await ModelConfig.findByIdAndUpdate(
-      modelConfigId,
-      filteredUpdateData,
-      { 
-        new: true, 
-        runValidators: true 
-      }
-    ).populate('modelId');
+    // Update model configuration if needed
+    if (modelConfigUpdated) {
+      await ModelConfig.findByIdAndUpdate(
+        globalConfig.modelConfigId,
+        modelConfigUpdateData,
+        { 
+          new: true, 
+          runValidators: true 
+        }
+      );
+    }
+
+    // Save global config if API key was updated
+    if (apiKeyUpdated) {
+      await globalConfig.save();
+    }
+
+    // Get updated data for response
+    const updatedGlobalConfig = await GlobalConfig.findById(globalConfigId)
+      .populate('modelId')
+      .populate('modelConfigId')
+      .populate('platformConfigId');
 
     // Update admin dashboard
-    await updateAdminActivity(adminId, "Model Updated", updatedModelConfig.modelId.name);
+    let activityMessage = "Model Configuration Updated";
+    if (apiKeyUpdated && modelConfigUpdated) {
+      activityMessage = "Model Configuration and API Key Updated";
+    } else if (apiKeyUpdated) {
+      activityMessage = "API Key Updated";
+    }
+    
+    await updateAdminActivity(adminId, activityMessage, globalConfig.modelId.name);
 
     res.status(200).json({
       success: true,
-      message: "Model configuration updated successfully",
-      data: updatedModelConfig,
+      message: "Configuration updated successfully",
+      data: {
+        globalConfig: updatedGlobalConfig,
+        updatedFields: {
+          apiKey: apiKeyUpdated,
+          modelConfig: modelConfigUpdated
+        }
+      },
     });
 
   } catch (error) {
-    console.error("Error updating model configuration:", error);
+    console.error("Error updating configuration:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Update API Key
+export const updateApiKey = async (req, res) => {
+  try {
+    const { globalConfigId } = req.params;
+    const { apiKey } = req.body;
+    const adminId = req.user.id;
+
+    if (!globalConfigId || !apiKey) {
+      return res.status(400).json({
+        success: false,
+        message: "Global config ID and API key are required"
+      });
+    }
+
+    // Verify admin owns this configuration
+    const globalConfig = await GlobalConfig.findOne({
+      _id: globalConfigId,
+      adminId: adminId
+    }).populate('modelId');
+
+    if (!globalConfig) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to update this configuration",
+      });
+    }
+
+    // Update API key
+    globalConfig.apiKey = apiKey;
+    await globalConfig.save();
+
+    // Update admin dashboard
+    await updateAdminActivity(adminId, "API Key Updated", globalConfig.modelId.name);
+
+    res.status(200).json({
+      success: true,
+      message: "API key updated successfully",
+      data: { apiKey: globalConfig.apiKey }
+    });
+
+  } catch (error) {
+    console.error("Error updating API key:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -439,110 +462,54 @@ export const updateModelConfig = async (req, res) => {
 };
 
 // Toggle Model Status
-// Toggle Model Status
 export const toggleModelStatus = async (req, res) => {
   try {
     const { modelConfigId } = req.params;
     const { isActive } = req.body;
-    const currIsActive = !isActive;
     const adminId = req.user.id;
-    console.log("Received isActive:", isActive);
-
+    console.log(req.body)
     // Validate input
     if (!modelConfigId) {
       return res.status(400).json({
         success: false,
-        message: "Model configuration ID is required",
+        message: "Global configuration ID is required",
       });
     }
 
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({
         success: false,
-        message: "isActive must be a boolean value",
+        message: "Enabled must be a boolean value",
       });
     }
-
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(modelConfigId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid model configuration ID format",
-      });
-    }
-
-    // Check if model config exists first
-    const existingModelConfig = await ModelConfig.findById(modelConfigId).populate("modelId");
-    if (!existingModelConfig) {
-      console.log("ModelConfig not found with ID:", modelConfigId);
-      return res.status(404).json({
-        success: false,
-        message: "Model configuration not found",
-      });
-    }
-
-    console.log("Found ModelConfig:", existingModelConfig._id);
 
     // Verify admin owns this configuration
     const globalConfig = await GlobalConfig.findOne({
-      adminId: adminId,
-      modelConfigId: { $in: [modelConfigId] }
-    });
-
+      _id: modelConfigId,
+      adminId: adminId
+    }).populate('modelId');
+    console.log(modelConfigId)
     if (!globalConfig) {
-      console.log("GlobalConfig not found for admin:", adminId, "with modelConfigId:", modelConfigId);
-      
-      // Debug: Show what global configs exist for this admin
-      const adminGlobalConfigs = await GlobalConfig.find({ adminId: adminId });
-      console.log("Admin's GlobalConfigs:", adminGlobalConfigs.map(gc => ({
-        id: gc._id,
-        modelConfigIds: gc.modelConfigId
-      })));
-      
       return res.status(403).json({
         success: false,
         message: "Unauthorized to modify this configuration",
       });
     }
 
-    console.log("Found GlobalConfig:", globalConfig._id);
-
-    // Update the isActive status using findByIdAndUpdate for better reliability
-    console.log("Before update - isActive:", existingModelConfig.isActive);
-    
-    const updatedModelConfig = await ModelConfig.findByIdAndUpdate(
-      modelConfigId,
-      { isActive: isActive },
-      { 
-        new: true, 
-        runValidators: true,
-        useFindAndModify: false
-      }
-    ).populate("modelId");
-
-    if (!updatedModelConfig) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to update model configuration",
-      });
-    }
-
-    console.log("After update - isActive:", updatedModelConfig.isActive);
-
-    // Verify the update was successful
-    const verifyUpdate = await ModelConfig.findById(modelConfigId);
-    console.log("Verification from DB - isActive:", verifyUpdate.isActive);
+    // Update the Enabled status
+    globalConfig.Enabled = isActive;
+    await globalConfig.save();
 
     // Update admin dashboard
     const action = isActive ? "Model Activated" : "Model Deactivated";
-    await updateAdminActivity(adminId, action, updatedModelConfig.modelId.name);
+    await updateAdminActivity(adminId, action, globalConfig.modelId.name);
 
     res.status(200).json({
       success: true,
       message: `Model ${isActive ? 'activated' : 'deactivated'} successfully`,
       data: {
-        modelConfig: updatedModelConfig,
-        isActive: updatedModelConfig.isActive
+        globalConfigId: globalConfig._id,
+        Enabled: globalConfig.Enabled
       },
     });
 
@@ -559,15 +526,10 @@ export const toggleModelStatus = async (req, res) => {
 // Get Admin Models Raw (All Admins)
 export const getAdminModelsRaw = async (req, res) => {
   try {
-    // Get all global configs with populated model configs and model info
+    // Get all global configs with populated references
     const globalConfigs = await GlobalConfig.find({})
-      .populate({
-        path: 'modelConfigId',
-        populate: {
-          path: 'modelId',
-          model: 'AllModels'
-        }
-      })
+      .populate('modelId')
+      .populate('modelConfigId')
       .populate('platformConfigId')
       .populate('adminId', 'name email')
       .sort({ createdAt: -1 });
@@ -579,34 +541,23 @@ export const getAdminModelsRaw = async (req, res) => {
       });
     }
 
-    // Transform the data to match frontend expectations
-    const transformedData = globalConfigs.flatMap(config => 
-      config.modelConfigId
-        .filter(modelConfig => modelConfig && modelConfig.modelId)
-        .map(modelConfig => ({
-          _id: modelConfig._id,
-          globalConfigId: config._id,
-          isActive: config.isActive,
-          admin: {
-            _id: config.adminId._id,
-            name: config.adminId.name,
-            email: config.adminId.email
-          },
-          modelConfig: {
-            apiKey: modelConfig.apiKey,
-            temperature: modelConfig.temperature,
-            maxTokens: modelConfig.maxTokens,
-            topP: modelConfig.topP,
-            frequencyPenalty: modelConfig.frequencyPenalty,
-            presencePenalty: modelConfig.presencePenalty,
-            isActive: modelConfig.isActive,
-          },
-          model: modelConfig.modelId,
-          createdAt: modelConfig.createdAt,
-          updatedAt: modelConfig.updatedAt,
-          platformConfig: config.platformConfigId
-        }))
-    );
+    // Transform the data
+    const transformedData = globalConfigs.map(config => ({
+      _id: config._id,
+      globalConfigId: config._id,
+      Enabled: config.Enabled,
+      admin: {
+        _id: config.adminId._id,
+        name: config.adminId.name,
+        email: config.adminId.email
+      },
+      modelConfig: config.modelConfigId,
+      model: config.modelId,
+      apiKey: config.apiKey,
+      createdAt: config.createdAt,
+      updatedAt: config.updatedAt,
+      platformConfig: config.platformConfigId
+    }));
 
     res.status(200).json({
       success: true,
@@ -628,31 +579,22 @@ export const getAdminModelsRaw = async (req, res) => {
 // Delete Model Configuration
 export const deleteModelConfig = async (req, res) => {
   try {
-    const { modelConfigId } = req.params;
+    const { globalConfigId } = req.params;
     const adminId = req.user.id;
 
     // Validate input
-    if (!modelConfigId) {
+    if (!globalConfigId) {
       return res.status(400).json({
         success: false,
-        message: "Model configuration ID is required",
-      });
-    }
-
-    // Find the model configuration and verify ownership
-    const modelConfig = await ModelConfig.findById(modelConfigId).populate('modelId');
-    if (!modelConfig) {
-      return res.status(404).json({
-        success: false,
-        message: "Model configuration not found",
+        message: "Global configuration ID is required",
       });
     }
 
     // Verify admin owns this configuration
     const globalConfig = await GlobalConfig.findOne({
-      adminId: adminId,
-      modelConfigId: modelConfigId
-    });
+      _id: globalConfigId,
+      adminId: adminId
+    }).populate('modelId');
 
     if (!globalConfig) {
       return res.status(403).json({
@@ -662,27 +604,18 @@ export const deleteModelConfig = async (req, res) => {
     }
 
     // Delete the model configuration
-    await ModelConfig.findByIdAndDelete(modelConfigId);
+    await ModelConfig.findByIdAndDelete(globalConfig.modelConfigId);
 
-    // Remove the model config reference from GlobalConfig
-    await GlobalConfig.updateOne(
-      { _id: globalConfig._id },
-      { $pull: { modelConfigId: modelConfigId } }
-    );
-
-    // If no more model configs, delete the global config
-    const updatedGlobalConfig = await GlobalConfig.findById(globalConfig._id);
-    if (updatedGlobalConfig.modelConfigId.length === 0) {
-      await GlobalConfig.findByIdAndDelete(globalConfig._id);
-    }
+    // Delete the global config
+    await GlobalConfig.findByIdAndDelete(globalConfigId);
 
     // Update admin dashboard
-    await updateAdminActivity(adminId, "Model Deleted", modelConfig.modelId.name);
+    await updateAdminActivity(adminId, "Model Deleted", globalConfig.modelId.name);
 
     res.status(200).json({
       success: true,
       message: "Model configuration deleted successfully",
-      data: modelConfig,
+      data: globalConfig,
     });
 
   } catch (error) {
@@ -829,42 +762,36 @@ export const getPlatformConfig = async (req, res) => {
 // Get Single Model Configuration
 export const getModelConfig = async (req, res) => {
   try {
-    const { modelConfigId } = req.params;
+    const { globalConfigId } = req.params;
     const adminId = req.user.id;
 
-    if (!modelConfigId) {
+    if (!globalConfigId) {
       return res.status(400).json({
         success: false,
-        message: "Model configuration ID is required"
+        message: "Global configuration ID is required"
       });
     }
 
-    // Find model config and verify ownership
-    const modelConfig = await ModelConfig.findById(modelConfigId).populate('modelId');
-    if (!modelConfig) {
-      return res.status(404).json({
-        success: false,
-        message: "Model configuration not found"
-      });
-    }
-
-    // Verify admin owns this configuration
+    // Find global config and verify ownership
     const globalConfig = await GlobalConfig.findOne({
-      adminId: adminId,
-      modelConfigId: modelConfigId
-    });
+      _id: globalConfigId,
+      adminId: adminId
+    })
+    .populate('modelId')
+    .populate('modelConfigId')
+    .populate('platformConfigId');
 
     if (!globalConfig) {
-      return res.status(403).json({
+      return res.status(404).json({
         success: false,
-        message: "Unauthorized to access this configuration"
+        message: "Configuration not found or unauthorized"
       });
     }
 
     res.status(200).json({
       success: true,
       message: "Model configuration retrieved successfully",
-      data: modelConfig
+      data: globalConfig
     });
 
   } catch (error) {

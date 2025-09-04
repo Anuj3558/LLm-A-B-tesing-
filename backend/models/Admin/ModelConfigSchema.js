@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 
 const { Schema } = mongoose;
+
 // ================= ModelConfig Schema =================
 const modelConfigSchema = new Schema(
   {
@@ -64,6 +65,8 @@ const platformConfigSchema = new Schema(
   }
 );
 
+const ModelConfig = mongoose.model("ModelConfig", modelConfigSchema);
+const PlatformConfig = mongoose.model("PlatformConfig", platformConfigSchema);
 // ================= GlobalConfig Schema =================
 const globalConfigSchema = new Schema(
   {
@@ -99,4 +102,7 @@ const globalConfigSchema = new Schema(
   { timestamps: true }
 );
 const GlobalConfig = mongoose.model("GlobalConfig", globalConfigSchema);
+
+
+export { ModelConfig, PlatformConfig };
 export default GlobalConfig;

@@ -38,13 +38,13 @@ AdminRouter.delete("/delete-user/:userId",validateToken,deleteUser)
 // AdminRouter.get("/model-configs", validateToken, getConfigs);
 // AdminRouter.put("/model-config/:id", validateToken, updateConfig);
 // AdminRouter.delete("/model-config/:id", validateToken, deleteConfig);
-AdminRouter.put('/models/:modelConfigId',validateToken, updateModelConfig);
+AdminRouter.put('/models/:globalConfigId',validateToken, updateModelConfig);
 
 // PUT /api/admin/models/:modelConfigId/toggle - Toggle model active status
 AdminRouter.put('/models/:modelConfigId/toggle',validateToken, toggleModelStatus);
 
 // DELETE /api/admin/models/:modelConfigId - Delete model configuration
-AdminRouter.delete('/models/:modelConfigId',validateToken, deleteModelConfig);
+AdminRouter.delete('/models/:globalConfigId',validateToken, deleteModelConfig);
 
 // PUT /api/admin/platform-config - Update platform configuration
 AdminRouter.put('/platform-config',validateToken, updatePlatformConfig);

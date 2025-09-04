@@ -253,7 +253,7 @@ const GlobalConfig = () => {
   const handleDeleteModel = async (modelConfigId) => {
     try {
       const model = adminModels.find(m => m._id === modelConfigId)
-      const response = await fetch(`${API_BASE_URL}/admin/models/${model.modelConfig._id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/models/${model.globalConfigId}`, {
         method: 'DELETE',
         headers: getApiHeaders()
       })
@@ -280,10 +280,11 @@ const GlobalConfig = () => {
   const handleModelToggle = async (modelConfigId) => {
     try {
       const model = adminModels.find(m => m._id === modelConfigId)
-      console.log('Toggling model:', model.modelConfig._id)
+      console.log('Toggling model:', model)
       if (!model) return
 
-      const response = await fetch(`${API_BASE_URL}/admin/models/${model.modelConfig._id}/toggle`, {
+      const response = await fetch(`${API_BASE_URL}/admin/models/${model.globalConfigId
+}/toggle`, {
         method: 'PUT',
         headers: getApiHeaders(),
         body: JSON.stringify({ isActive: !model.isActive })
@@ -296,7 +297,7 @@ const GlobalConfig = () => {
       // Update the model in the list
       setAdminModels(prev => prev.map(m => 
         m._id === modelConfigId 
-          ? { ...m, isActive: !m.isActive }
+          ? { ...m, Enabled: !m.Enabled }
           : m
       ))
      
@@ -309,9 +310,9 @@ const GlobalConfig = () => {
   // Update model configuration
   const updateModelConfig = async (modelConfigId, field, value) => {
     const model = adminModels.find(m => m._id === modelConfigId)
-    console.log(field)
+    console.log(model)
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/models/${model.modelConfig._id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/models/${model.globalConfigId}`, {
         method: 'PUT',
         headers: getApiHeaders(),
         body: JSON.stringify({ [field]: value })

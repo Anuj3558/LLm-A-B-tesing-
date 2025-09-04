@@ -12,9 +12,9 @@ const ModelCard = ({
   const { _id, modelConfig, model: modelInfo, isActive } = model
   
   // Use isActive from the model object, fallback to modelConfig.isActive
-  const modelIsActive = isActive !== undefined ? isActive : modelConfig?.isActive || false
+  const modelIsActive = model.Enabled !== undefined ? model.Enabled : modelConfig?.isActive || false
   
-  console.log('Model active state:', modelIsActive)
+  console.log('Model active state:', model)
   
   return (
     <div className="border border-gray-200 rounded-lg p-6">
