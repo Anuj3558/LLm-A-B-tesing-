@@ -1,5 +1,5 @@
 import AdminDashboard from '../models/Admin/AdminDashboardSchema.js';
-
+x
 export const initializeDashboard = async (adminId) => {
   const defaultDashboard = {
     adminId,

@@ -35,12 +35,6 @@ const AllModels = new Schema(
 AllModels.index({ name: 1, provider: 1 }, { unique: true });
 
 // Optional: normalize endpoint (remove trailing slash)
-AllModels.pre("save", function (next) {
-  if (this.endpoint && this.endpoint.length > 1 && this.endpoint.endsWith("/")) {
-    this.endpoint = this.endpoint.replace(/\/+$/, "");
-  }
-  next();
-});
 
 const AllModelsConfig = model("AllModels", AllModels);
 export default AllModelsConfig;

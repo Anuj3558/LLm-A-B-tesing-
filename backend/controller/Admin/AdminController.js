@@ -397,9 +397,9 @@ export const getUserById = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { email, username, fullName } = req.body;
+    const { modelIds } = req.body;
     const adminId = req.user.id; // Admin ID from authenticated user
-
+    const filteredModelIds = modelIds.filter(id => id !== null);
     // Find the user
     const user = await User.findById(userId);
     if (!user) {
@@ -407,48 +407,16 @@ export const updateUser = async (req, res) => {
         message: "User not found" 
       });
     }
-
+    console.log(user.adminId.toString() !== adminId.toString())
     // Verify that this user belongs to the admin
-    if (user.adminId.toString() !== adminId) {
+    if (user.adminId.toString() !== adminId.toString()) {
       return res.status(403).json({ 
         message: "You can only update your own users" 
       });
     }
 
     // Check for duplicate email (if email is being updated)
-    if (email && email !== user.email) {
-      const existingEmailUser = await User.findOne({ 
-        email: email.toLowerCase(),
-        _id: { $ne: userId }
-      });
-      if (existingEmailUser) {
-        return res.status(409).json({ 
-          message: "Email already exists" 
-        });
-      }
-      user.email = email.toLowerCase().trim();
-    }
-
-    // Check for duplicate username (if username is being updated)
-    if (username && username !== user.username) {
-      const existingUsernameUser = await User.findOne({ 
-        username: username,
-        _id: { $ne: userId }
-      });
-      const existingAdmin = await Admin.findOne({ username: username });
-      
-      if (existingUsernameUser || existingAdmin) {
-        return res.status(409).json({ 
-          message: "Username already exists" 
-        });
-      }
-      user.username = username.trim();
-    }
-
-    // Update full name
-    if (fullName !== undefined) {
-      user.fullName = fullName?.trim() || "";
-    }
+     user.allowedModel.push(filteredModelIds)
 
     await user.save();
 
@@ -531,113 +499,10 @@ export const deleteUser = async (req, res) => {
 };
 
 // Export users data
-export const exportUsers = async (req, res) => {
-  try {
-    const adminId = req.user.id; // Admin ID from authenticated user
 
-    // Verify that the admin exists
-    const admin = await Admin.findById(adminId);
-    if (!admin) {
-      return res.status(404).json({ 
-        message: "Admin not found" 
-      });
-    }
-
-    // Get all users under this admin
-    const users = await User.find({ adminId }).select('-password');
-
-    // Prepare CSV data
-    const csvData = users.map(user => ({
-      ID: user._id,
-      Email: user.email,
-      Username: user.username,
-      'Full Name': user.fullName || '',
-      Role: user.role,
-      Status: user.isActive ? 'Active' : 'Inactive',
-      'Last Login': user.lastLogin ? user.lastLogin.toISOString() : 'Never',
-      'Created At': user.createdAt.toISOString(),
-      'Updated At': user.updatedAt.toISOString()
-    }));
-
-    // Convert to CSV format
-    const csvHeaders = Object.keys(csvData[0] || {});
-    const csvRows = csvData.map(row => 
-      csvHeaders.map(header => `"${row[header] || ''}"`).join(',')
-    );
-    const csvContent = [
-      csvHeaders.join(','),
-      ...csvRows
-    ].join('\n');
-
-    // Set response headers for file download
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="users-export-${new Date().toISOString().split('T')[0]}.csv"`);
-    
-    res.status(200).send(csvContent);
-
-  } catch (error) {
-    console.error("Error exporting users:", error);
-    res.status(500).json({ 
-      message: "Server error", 
-      error: error.message 
-    });
-  }
-};
 
 // Reset user password
-export const resetUserPassword = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { newPassword } = req.body;
-    const adminId = req.user.id; // Admin ID from authenticated user
 
-    // Validate new password
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ 
-        message: "New password must be at least 6 characters long" 
-      });
-    }
-
-    // Find the user
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ 
-        message: "User not found" 
-      });
-    }
-
-    // Verify that this user belongs to the admin
-    if (user.adminId.toString() !== adminId) {
-      return res.status(403).json({ 
-        message: "You can only reset passwords for your own users" 
-      });
-    }
-
-    // Hash the new password
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-    // Update user password
-    user.password = hashedPassword;
-    await user.save();
-
-    res.status(200).json({
-      message: "User password reset successfully",
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
-      }
-    });
-
-  } catch (error) {
-    console.error("Error resetting user password:", error);
-    res.status(500).json({ 
-      message: "Server error", 
-      error: error.message 
-    });
-  }
-};
 
 export const getDashboardData = async (req, res) => {
   try {

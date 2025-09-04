@@ -11,7 +11,8 @@ import {
     getAllAdminUsernames,
     getAllUsers,
     getDashboardData,
-    toggleUserStatus
+    toggleUserStatus,
+    updateUser
 } from "../../controller/Admin/AdminController.js";
 import { validateToken } from "../../middleware/ValidateToken.js";
 import { AddAdminModelConfig, deleteModelConfig, GetAllAdminModelsRaw, toggleModelStatus, updateModelConfig, updatePlatformConfig } from "../../controller/Admin/modelConfigController.js";
@@ -47,6 +48,8 @@ AdminRouter.delete('/models/:modelConfigId',validateToken, deleteModelConfig);
 
 // PUT /api/admin/platform-config - Update platform configuration
 AdminRouter.put('/platform-config',validateToken, updatePlatformConfig);
-AdminRouter.get("/dashboard",validateToken,getDashboardData) // Assuming you have an addUser function
+AdminRouter.get("/dashboard",validateToken,getDashboardData)
+AdminRouter.post("/update-allowed-models/:userId",validateToken,updateUser)
+// Assuming you have an addUser function
 // Export the router
 export default AdminRouter;

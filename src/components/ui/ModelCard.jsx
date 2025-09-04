@@ -1,7 +1,6 @@
 "use client"
 
 import { Key, Trash2 } from "lucide-react"
-import { useEffect } from "react"
 
 const ModelCard = ({ 
   model, 

@@ -36,7 +36,12 @@ const userSchema = new Schema(
     },
     lastLogin: {
       type: Date
-    }
+    },
+    allowedModel:[{
+      type: mongoose.Schema.Types.ObjectId,
+      ref : "ModelConfig" , 
+      unique:true
+    }]
   },
   { timestamps: true }
 );
