@@ -18,7 +18,7 @@ const StatusMessages = ({ error, success, setError, setSuccess }) => {
   return (
     <>
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+        <div className="bg-red-50 border-l-4 border-red-500 z-50 p-4 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -41,7 +41,7 @@ const StatusMessages = ({ error, success, setError, setSuccess }) => {
       )}
       
       {success && (
-        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg">
+        <div className="bg-green-50 border-l-4 z-50 border-green-500 p-4 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -246,7 +246,7 @@ const UsersTable = ({
   if (loading) {
     return <SkeletonLoading />
   }
-
+  
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       {users.length === 0 ? (

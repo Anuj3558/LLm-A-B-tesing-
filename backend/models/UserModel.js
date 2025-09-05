@@ -39,7 +39,7 @@ const userSchema = new Schema(
     },
     allowedModel:[{
       type: mongoose.Schema.Types.ObjectId,
-      ref : "ModelConfig" , 
+      ref : "GlobalConfig" , 
       unique:true
     }]
   },

@@ -67,6 +67,7 @@ const UserManagement = () => {
       if (!response.ok) throw new Error('Failed to fetch users')
       const data = await response.json()
       setUsers(data.users || [])
+
     } catch (err) {
       setError(err.message)
       console.error('Error fetching users:', err)
@@ -83,7 +84,6 @@ const UserManagement = () => {
 
       if (!response.ok) throw new Error('Failed to fetch models')
       const data = await response.json()
-    console.log(data)
       setAllModels(data?.data || [])
     } catch (err) {
       console.error('Error fetching models:', err)

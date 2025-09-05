@@ -45,7 +45,6 @@ const UserSettings = () => {
   ]
 
   const handleConfigSave = () => {
-    console.log("Saving configuration:", config)
     alert("Configuration saved successfully!")
   }
 

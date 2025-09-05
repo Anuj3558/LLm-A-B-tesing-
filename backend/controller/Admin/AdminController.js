@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import verifySecretKey from "../../middleware/VerifySecrete.js";
 import { initializeDashboard } from "../../services/dashboardUtils.js";
 import AdminDashboard from "../../models/Admin/AdminDashboardSchema.js";
+import AllModelsConfig from "../../models/AllModelConfig.js";
 // Function to verify secret key
 
 
@@ -208,6 +209,7 @@ export const getAllUsers = async (req, res) => {
   try {
     const adminId = req.user.id; // Admin ID from authenticated user
     console.log("Fetching all users for admin:", adminId);
+    
     // Verify that the admin exists
     const admin = await Admin.findById(adminId);
     if (!admin) {
@@ -217,24 +219,49 @@ export const getAllUsers = async (req, res) => {
     }
 
     // Get all users under this admin
-    const users = await User.find({ adminId }).select('-password');
-
+    const users = await User.find({ adminId })
+      .select('-password');
+    
+    // Process users to include model names instead of IDs
+    const processedUsers = await Promise.all(
+      users.map(async (user) => {
+        // Filter out null values from allowedModel
+        const validModelIds = user.allowedModel.filter(modelId => modelId !== null);
+        
+        // Fetch model names from AllModelsConfig
+        const modelNames = await Promise.all(
+          validModelIds.map(async (modelId) => {
+            try {
+              const model = await AllModelsConfig.findById(modelId);
+              return model ? model.name : 'Unknown Model';
+            } catch (error) {
+              console.error(`Error fetching model ${modelId}:`, error);
+              return 'Unknown Model';
+            }
+          })
+        );
+        
+        return {
+          id: user._id,
+          email: user.email,
+          username: user.username,
+          fullName: user.fullName,
+          role: user.role,
+          allowedModel: modelNames,
+          isActive: user.isActive,
+          adminId: user.adminId,
+          lastLogin: user.lastLogin,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        };
+      })
+    );
+    
     res.status(200).json({
       message: "Users fetched successfully",
-      users: users.map(user => ({
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role,
-        isActive: user.isActive,
-        adminId: user.adminId,
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }))
+      users: processedUsers
     });
-
+    
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ 
@@ -400,6 +427,7 @@ export const updateUser = async (req, res) => {
     const { modelIds } = req.body;
     const adminId = req.user.id; // Admin ID from authenticated user
     const filteredModelIds = modelIds.filter(id => id !== null);
+    
     // Find the user
     const user = await User.findById(userId);
     if (!user) {
@@ -407,7 +435,7 @@ export const updateUser = async (req, res) => {
         message: "User not found" 
       });
     }
-    console.log(user.adminId.toString() !== adminId.toString())
+
     // Verify that this user belongs to the admin
     if (user.adminId.toString() !== adminId.toString()) {
       return res.status(403).json({ 
@@ -415,8 +443,12 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    // Check for duplicate email (if email is being updated)
-     user.allowedModel.push(filteredModelIds)
+    // Only push model IDs that are not already in allowedModel
+    filteredModelIds.forEach(modelId => {
+      if (!user.allowedModel.includes(modelId)) {
+        user.allowedModel.push(modelId);
+      }
+    });
 
     await user.save();
 
@@ -430,6 +462,7 @@ export const updateUser = async (req, res) => {
         role: user.role,
         isActive: user.isActive,
         adminId: user.adminId,
+        allowedModel: user.allowedModel, // Include allowedModel in response
         updatedAt: user.updatedAt
       }
     });

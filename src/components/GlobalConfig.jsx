@@ -126,7 +126,6 @@ const GlobalConfig = () => {
       }
      
       const data = await response.json()
-      console.log('Available models:', data)
       setAvailableModels(data?.data || [])
     } catch (err) {
       console.error('Error fetching available models:', err)
@@ -197,7 +196,6 @@ const GlobalConfig = () => {
     setError(null)
 
     try {
-      console.log('Adding model to server:', addModelForm)
       const response = await fetch(`${API_BASE_URL}/admin/add-model`, {
         method: 'POST',
         headers: getApiHeaders(),
@@ -280,7 +278,6 @@ const GlobalConfig = () => {
   const handleModelToggle = async (modelConfigId) => {
     try {
       const model = adminModels.find(m => m._id === modelConfigId)
-      console.log('Toggling model:', model)
       if (!model) return
 
       const response = await fetch(`${API_BASE_URL}/admin/models/${model.globalConfigId
@@ -310,7 +307,6 @@ const GlobalConfig = () => {
   // Update model configuration
   const updateModelConfig = async (modelConfigId, field, value) => {
     const model = adminModels.find(m => m._id === modelConfigId)
-    console.log(model)
     try {
       const response = await fetch(`${API_BASE_URL}/admin/models/${model.globalConfigId}`, {
         method: 'PUT',

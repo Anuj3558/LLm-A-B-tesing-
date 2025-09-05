@@ -21,7 +21,6 @@ const UserDashboard = ({ userId }) => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    console.log(userId)
     const fetchDashboard = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dashboards/user/${userId}`)

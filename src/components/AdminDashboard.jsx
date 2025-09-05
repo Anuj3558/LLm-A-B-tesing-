@@ -77,7 +77,6 @@ const AdminDashboard = () => {
         
         const data = await response.json()
         const finalData = data.data
-        console.log("Dashboard data:", finalData)
         setDashboardData({
           finalData
       })
@@ -143,7 +142,6 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         { dashboardData.finalData.kpiData.map((kpi, index) => {
           const Icon = kpi.icon
-          console.log("KPI Data:", kpi)
           return (
             <div
               key={index}

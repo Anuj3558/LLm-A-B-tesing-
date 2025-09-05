@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X, ToggleLeft, ToggleRight, Check, ChevronDown, Trash2 } from "lucide-react"
 
 const ConfigModal = ({ 
@@ -14,9 +14,27 @@ const ConfigModal = ({
 }) => {
   if (!showConfigModal || !selectedUser) return null
 
-  const [selectedModels, setSelectedModels] = useState(selectedUser.allowedModels || [])
+  const [selectedModels, setSelectedModels] = useState([])
   const [isSavingModels, setIsSavingModels] = useState(false)
   const [showConfigJson, setShowConfigJson] = useState(false)
+
+  // Update selectedModels when selectedUser changes
+  useEffect(() => {
+    if (selectedUser && selectedUser.allowedModels) {
+      setSelectedModels(selectedUser.allowedModels)
+    } else {
+      setSelectedModels([])
+    }
+  }, [selectedUser])
+
+  // Reset state when modal is closed
+  useEffect(() => {
+    if (!showConfigModal) {
+      setSelectedModels([])
+      setIsSavingModels(false)
+      setShowConfigJson(false)
+    }
+  }, [showConfigModal])
 
   const handleModalClick = (e) => e.stopPropagation()
   const handleBackdropClick = (e) => e.target === e.currentTarget && setShowConfigModal(false)
@@ -28,12 +46,13 @@ const ConfigModal = ({
         : [...prev, modelId]
     )
   }
-  console.log("hii",allModels)
 
   const handleSaveModels = async () => {
     setIsSavingModels(true)
     try {
       await updateAllowedModels(selectedUser.id, selectedModels)
+      // Close modal after successful save
+      setShowConfigModal(false)
     } finally {
       setIsSavingModels(false)
     }
@@ -89,31 +108,34 @@ const ConfigModal = ({
             <p className="text-sm text-gray-500 mb-4">Select which models this user can access</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {allModels.map(model => (
+              {allModels.map(model => {
+                const modelId = model?.model?._id
+                const isSelected = selectedModels.includes(modelId)
                 
-                <div 
-                  key={model?.model?._id } 
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedModels.includes(model?.model?._id) 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:bg-gray-50'
-                  }`}
-                  onClick={() => handleModelToggle(model?.model._id)}
-                >
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedModels.includes(model.model._id)}
-                      onChange={() => handleModelToggle(model.model._id)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label className="ml-3 block text-sm font-medium text-gray-700">
-                      {model.model.name}
-                      <span className="block text-xs text-gray-500 mt-1">{model.model.provider}</span>
+                return (
+                  <div 
+                    key={modelId} 
+                    className={`p-3 border rounded-lg transition-colors ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleModelToggle(modelId)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div className="ml-3 block text-sm font-medium text-gray-700">
+                        {model?.model?.name}
+                        <span className="block text-xs text-gray-500 mt-1">{model?.model?.provider}</span>
+                      </div>
                     </label>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             
             <div className="mt-4 flex justify-end">
@@ -129,8 +151,6 @@ const ConfigModal = ({
             </div>
           </div>
 
-          
-          
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
