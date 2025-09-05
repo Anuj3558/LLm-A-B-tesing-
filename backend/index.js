@@ -29,7 +29,7 @@ const app = express();
 // CORS configuration for different environments
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CORS_ORIGIN || 'https://genzeon-ab.vercel.app'
+    ? process.env.CORS_ORIGIN || 'https://genzeon-ab.onrender.com' || "https://genzeon-ab.vercel.app"
     : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -43,10 +43,7 @@ app.use(morgan('dev'));
 app.use(bodyParser.json()); // Parse JSON bodies
 app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded form data
 
-// ===== Test Route =====
-app.get('/', (req, res) => {
-  res.send({ message: 'Server is running 🚀' });
-});
+
 // ===== Login Route =====
 app.use('/api/auth/login',loginUser)
 // ===== Admin Routes =====
@@ -62,12 +59,19 @@ app.use("/api/prompt-history",promptHistoryRoutes);
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// Handle React Router - send all non-API requests to React app
-app.get('*', (req, res) => {
-  // Don't serve index.html for API routes
+// Handle React Router - serve React app for all non-API routes
+app.use((req, res, next) => {
+  // Skip if it's an API route
   if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'API endpoint not found' });
+    return next();
   }
+  
+  // Skip if it's a static file (has file extension)
+  if (req.path.includes('.') && !req.path.endsWith('/')) {
+    return next();
+  }
+  
+  // Serve React app for all other routes
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
