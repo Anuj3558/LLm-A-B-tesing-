@@ -1,5 +1,7 @@
 # Logs
 .env
+.env.local
+.env.production
 logs
 *.log
 npm-debug.log*
@@ -12,6 +14,9 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Vercel
+.vercel
 
 # Editor directories and files
 .vscode/*
