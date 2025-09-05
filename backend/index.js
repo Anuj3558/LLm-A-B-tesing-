@@ -24,6 +24,39 @@ dotenv.config();
 connectDB();
 
 const app = express();
+  
+  // Skip if it's a static file (has file extension)
+  if (req.path.includes('.') && !req.path.endsWith('/')) {
+    return next();
+  }
+  
+  // Serve React app for all other routes
+  const indexPath = path.join(distPath, 'index.html');
+  console.log('🎯 Serving React app for route:', req.path, '→', indexPath);
+  res.sendFile(indexPath);
+});import cors from 'cors';
+import morgan from 'morgan';
+import bodyParser from 'body-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import connectDB from './connection.js';
+import AdminRouter from './router/Admin/AdminRouter.js';
+import UserRouter from './router/User/UserRouter.js';
+import llmTestingRoutes from './routes/llmTesting.js';
+import promptHistoryRoutes from './routes/promptHistory.js';
+import { loginUser } from './services/Auth.js';
+
+// Get directory name for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load env vars
+dotenv.config();
+
+// Connect to MongoDB
+connectDB();
+
+const app = express();
 
 // ===== Middleware =====
 // CORS configuration for different environments
@@ -56,8 +89,16 @@ app.use("/api/llm",llmTestingRoutes);
 app.use("/api/prompt-history",promptHistoryRoutes);
 
 // ===== Serve React App =====
+// Determine the correct path to the built React app
+const distPath = process.env.NODE_ENV === 'production' 
+  ? path.join(process.cwd(), 'dist')  // For Render: use process.cwd()
+  : path.join(__dirname, '../dist');  // For local development
+
+console.log('📂 Serving static files from:', distPath);
+console.log('📂 Looking for index.html at:', path.join(distPath, 'index.html'));
+
 // Serve static files from React build
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(distPath));
 
 // Handle React Router - serve React app for all non-API routes
 app.use((req, res, next) => {
@@ -72,7 +113,9 @@ app.use((req, res, next) => {
   }
   
   // Serve React app for all other routes
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  const indexPath = path.join(distPath, 'index.html');
+  console.log('🎯 Serving React app for route:', req.path, '→', indexPath);
+  res.sendFile(indexPath);
 });
 
 // ===== Start Server =====
