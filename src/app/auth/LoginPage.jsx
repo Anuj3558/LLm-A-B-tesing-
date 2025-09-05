@@ -117,6 +117,7 @@ const LoginPage = ({ onLogin }) => {
       console.log('Login response:', response)
       if (response.token && response.message === 'Login successful') {
         // Store token in cookies
+        console.log("Setting cookie with token:", response.token)
         setCookie('authToken', response.token, 7) // 7 days expiry
         
         // Show success notification

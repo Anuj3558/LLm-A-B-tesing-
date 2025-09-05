@@ -46,7 +46,6 @@ function App() {
       </div>
     )
   }
-
   return (
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -80,7 +79,7 @@ function App() {
             }
           >
             <Route index element={<Navigate to="/user/dashboard" />} />
-            <Route path="dashboard" element={<UserDashboard />} />
+            <Route path="dashboard" element={<UserDashboard userId = {user ? user.id :"null"}/>} />
             <Route path="test" element={<PromptTesting />} />
             <Route path="history" element={<PromptHistory />} />
             <Route path="settings" element={<UserSettings />} />

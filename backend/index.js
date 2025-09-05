@@ -8,6 +8,7 @@ import connectDB from './connection.js';
 import AdminRouter from './router/Admin/AdminRouter.js';
 import { loginUser } from './services/Auth.js';
 import LLmRouter from './services/LLmModelRoutes.js';
+import UserRouter from './router/User/UserRouter.js';
 
 // Load env vars
 dotenv.config();
@@ -36,6 +37,9 @@ app.use("/admin",AdminRouter);
 // ===== User Routes =====
 // ======Add New LLM Model Route=====
 app.use('/llm', LLmRouter);
+
+app.use('/user', UserRouter
+);
 // ===== Start Server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

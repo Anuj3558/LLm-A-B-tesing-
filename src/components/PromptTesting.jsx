@@ -1,23 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Play, Clock, Zap, ThumbsUp, ThumbsDown, Copy, Download, Sparkles } from "lucide-react"
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 const PromptTesting = () => {
   const [prompt, setPrompt] = useState("")
-  const [selectedModels, setSelectedModels] = useState(["gpt-4", "claude-3"])
+  const [selectedModels, setSelectedModels] = useState([])
   const [evaluationCriteria, setEvaluationCriteria] = useState(["accuracy", "tokens", "latency"])
   const [testResults, setTestResults] = useState(null)
   const [testing, setTesting] = useState(false)
-
-  const availableModels = [
-    { id: "gpt-4", name: "GPT-4", description: "Most capable model" },
-    { id: "gpt-3.5", name: "GPT-3.5 Turbo", description: "Fast and efficient" },
-    { id: "claude-3", name: "Claude 3", description: "Excellent reasoning" },
-    { id: "gemini-pro", name: "Gemini Pro", description: "Google's latest" },
-    { id: "llama-2", name: "LLaMA 2", description: "Open source model" },
-  ]
+  const [availableModels, setAvailableModels] = useState([])
+  const [loadingModels, setLoadingModels] = useState(true)
 
   const criteriaOptions = [
     { id: "accuracy", name: "Accuracy", description: "Response quality and correctness" },
@@ -26,6 +20,65 @@ const PromptTesting = () => {
     { id: "coherence", name: "Coherence", description: "Logical flow and consistency" },
     { id: "creativity", name: "Creativity", description: "Originality and innovation" },
   ]
+
+  // Function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('authToken') || 
+           sessionStorage.getItem('authToken') || 
+           document.cookie.replace(/(?:(?:^|.*;\s*)authToken\s*=\s*([^;]*).*$)|^.*$/, '$1') || 
+           null;
+  }
+
+  // Fetch allowed models for the user
+  useEffect(() => {
+    const fetchAllowedModels = async () => {
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        // Replace with your actual API endpoint
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/allowed-models`, {
+          headers
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch allowed models: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        console.log("Allowed models response:", data.data.models.allowedModel);
+        if (data.success) {
+          setAvailableModels(data.data.models.allowedModel || []);
+          // Auto-select the first model if available
+          if (data.data.models.length > 0) {
+            setSelectedModels([data.data.models[0].id]);
+          }
+        } else {
+          throw new Error(data.error || 'Failed to fetch allowed models');
+        }
+      } catch (error) {
+        console.error("Error fetching allowed models:", error);
+        // Fallback to default models if API fails
+        setAvailableModels([
+          { id: "gpt-4", name: "GPT-4", description: "Most capable model" },
+          { id: "gpt-3.5", name: "GPT-3.5 Turbo", description: "Fast and efficient" },
+          { id: "claude-3", name: "Claude 3", description: "Excellent reasoning" },
+        ]);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    fetchAllowedModels();
+  }, []);
 
   const handleModelToggle = (modelId) => {
     setSelectedModels((prev) => (prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]))
@@ -45,30 +98,82 @@ const PromptTesting = () => {
 
     setTesting(true)
 
-    // Simulate API calls with different delays for each model
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      const token = getAuthToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
-    const mockResults = selectedModels.map((modelId) => {
-      const model = availableModels.find((m) => m.id === modelId)
-      return {
-        modelId,
-        modelName: model.name,
-        response: `This is a comprehensive response from ${model.name}. ${prompt.includes("code") ? 'Here\'s a code example:\n\n```python\ndef example():\n    return "Hello World"\n```' : "The response addresses your query with detailed explanations and examples."} This model provides high-quality outputs with good reasoning capabilities.`,
-        responseTime: Math.floor(Math.random() * 2000) + 500,
-        tokens: Math.floor(Math.random() * 150) + 50,
-        accuracy: Math.floor(Math.random() * 25) + 75,
-        coherence: Math.floor(Math.random() * 20) + 80,
-        creativity: Math.floor(Math.random() * 30) + 70,
+      // Call your actual API endpoint for testing
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/prompt-test`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          prompt,
+          models: selectedModels,
+          criteria: evaluationCriteria
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Test failed: ${response.status} ${response.statusText}`);
       }
-    })
 
-    setTestResults(mockResults)
-    setTesting(false)
+      const data = await response.json();
+      
+      if (data.success) {
+        setTestResults(data.data.results);
+      } else {
+        throw new Error(data.error || 'Test failed');
+      }
+    } catch (error) {
+      console.error("Error testing prompt:", error);
+      
+      // Fallback to mock data if API fails
+      const mockResults = selectedModels.map((modelId) => {
+        const model = availableModels.find((m) => m.id === modelId)
+        return {
+          modelId,
+          modelName: model.name,
+          response: `This is a comprehensive response from ${model.name}. ${prompt.includes("code") ? 'Here\'s a code example:\n\n```python\ndef example():\n    return "Hello World"\n```' : "The response addresses your query with detailed explanations and examples."} This model provides high-quality outputs with good reasoning capabilities.`,
+          responseTime: Math.floor(Math.random() * 2000) + 500,
+          tokens: Math.floor(Math.random() * 150) + 50,
+          accuracy: Math.floor(Math.random() * 25) + 75,
+          coherence: Math.floor(Math.random() * 20) + 80,
+          creativity: Math.floor(Math.random() * 30) + 70,
+        }
+      })
+
+      setTestResults(mockResults);
+    } finally {
+      setTesting(false);
+    }
   }
 
-  const handleFeedback = (modelId, feedback) => {
-    console.log(`Feedback for ${modelId}: ${feedback}`)
-    // In a real app, this would send feedback to the backend
+  const handleFeedback = async (modelId, feedback) => {
+    try {
+      const token = getAuthToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/feedback`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          modelId,
+          feedback,
+          prompt,
+          result: testResults.find(r => r.modelId === modelId)
+        })
+      });
+
+      console.log(`Feedback for ${modelId}: ${feedback} submitted successfully`);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+    }
   }
 
   const copyToClipboard = (text) => {
@@ -91,12 +196,44 @@ const PromptTesting = () => {
 
   const bestModel = getBestPerforming()
 
+  if (loadingModels) {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold text-whale-blue mb-2">Prompt Testing</h1>
+          <p className="text-charcoal/70">Loading available models...</p>
+        </div>
+        <div className="bg-white shadow p-6">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-32 bg-gray-200 rounded mb-6"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+            </div>
+            <div className="h-12 bg-gray-200 rounded mt-6"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-whale-blue mb-2">Prompt Testing</h1>
-        <p className="text-charcoal/70">Test your prompts across multiple LLM models and compare results</p>
+        <p className="text-charcoal/70">Test your prompts across your available LLM models and compare results</p>
       </div>
 
       {/* Prompt Input Section */}
@@ -123,25 +260,31 @@ const PromptTesting = () => {
               <label className="block text-sm font-medium text-whale-blue mb-3">
                 Select Models ({selectedModels.length} selected)
               </label>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {availableModels.map((model) => (
-                  <label
-                    key={model.id}
-                    className="flex items-start p-3 border border-storm-grey/20 rounded-lg hover:bg-lilly-white transition-colors cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedModels.includes(model.id)}
-                      onChange={() => handleModelToggle(model.id)}
-                      className="mt-1 mr-3 text-vibrant-blue focus:ring-vibrant-blue"
-                    />
-                    <div>
-                      <div className="font-medium text-whale-blue">{model.name}</div>
-                      <div className="text-sm text-charcoal/70">{model.description}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              {availableModels.length === 0 ? (
+                <div className="text-charcoal/70 p-3 border border-storm-grey/20 rounded-lg">
+                  No models available. Please contact your administrator.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {availableModels.map((model) => (
+                    <label
+                      key={model.id}
+                      className="flex items-start p-3 border border-storm-grey/20 rounded-lg hover:bg-lilly-white transition-colors cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedModels.includes(model.id)}
+                        onChange={() => handleModelToggle(model.id)}
+                        className="mt-1 mr-3 text-vibrant-blue focus:ring-vibrant-blue"
+                      />
+                      <div>
+                        <div className="font-medium text-whale-blue">{model.name}</div>
+                        <div className="text-sm text-charcoal/70">{model.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Evaluation Criteria */}
@@ -174,7 +317,7 @@ const PromptTesting = () => {
           <button
             onClick={handleTest}
             disabled={testing || !prompt.trim() || selectedModels.length === 0}
-            className="w-full flex items-center justify-center px-6 py-4 genzeon-gradient text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {testing ? (
               <>
@@ -196,9 +339,9 @@ const PromptTesting = () => {
         <div className="space-y-8">
           {/* Best Performing Model */}
           {bestModel && (
-            <div className="bg-white shadow p-6 border-l-4 border-vibrant-teal">
+            <div className="bg-white shadow p-6 border-l-4 border-green-500">
               <div className="flex items-center mb-2">
-                <Sparkles className="text-vibrant-teal mr-2" size={20} />
+                <Sparkles className="text-green-500 mr-2" size={20} />
                 <h3 className="text-lg font-semibold text-whale-blue">Best Performing Model</h3>
               </div>
               <p className="text-charcoal/70">
@@ -211,11 +354,11 @@ const PromptTesting = () => {
           {/* Response Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {testResults.map((result, index) => (
-              <div key={index} className={`bg-white shadow p-6 ${result === bestModel ? "ring-2 ring-vibrant-teal" : ""}`}>
+              <div key={index} className={`bg-white shadow p-6 ${result === bestModel ? "ring-2 ring-green-500" : ""}`}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-whale-blue flex items-center">
                     {result.modelName}
-                    {result === bestModel && <Sparkles className="ml-2 text-vibrant-teal" size={16} />}
+                    {result === bestModel && <Sparkles className="ml-2 text-green-500" size={16} />}
                   </h3>
                   <div className="flex space-x-4 text-sm text-charcoal/70">
                     <span className="flex items-center">
@@ -229,7 +372,7 @@ const PromptTesting = () => {
                   </div>
                 </div>
 
-                <div className="bg-lilly-white p-4 rounded-lg mb-4 max-h-48 overflow-y-auto">
+                <div className="bg-gray-50 p-4 rounded-lg mb-4 max-h-48 overflow-y-auto">
                   <pre className="text-sm text-charcoal/80 whitespace-pre-wrap font-sans">{result.response}</pre>
                 </div>
 
@@ -243,21 +386,21 @@ const PromptTesting = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => copyToClipboard(result.response)}
-                      className="p-2 text-charcoal/50 hover:text-vibrant-blue hover:bg-vibrant-blue/10 rounded-lg transition-colors"
+                      className="p-2 text-charcoal/50 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Copy response"
                     >
                       <Copy size={16} />
                     </button>
                     <button
                       onClick={() => handleFeedback(result.modelId, "positive")}
-                      className="p-2 text-charcoal/50 hover:text-vibrant-teal hover:bg-vibrant-teal/10 rounded-lg transition-colors"
+                      className="p-2 text-charcoal/50 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
                       title="Positive feedback"
                     >
                       <ThumbsUp size={16} />
                     </button>
                     <button
                       onClick={() => handleFeedback(result.modelId, "negative")}
-                      className="p-2 text-charcoal/50 hover:text-crimson hover:bg-crimson/10 rounded-lg transition-colors"
+                      className="p-2 text-charcoal/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       title="Negative feedback"
                     >
                       <ThumbsDown size={16} />
@@ -322,11 +465,11 @@ const PromptTesting = () => {
           <div className="bg-white shadow p-6">
             <h3 className="text-lg font-semibold text-whale-blue mb-4">Export Results</h3>
             <div className="flex space-x-4">
-              <button className="flex items-center px-4 py-2 border border-storm-grey/30 text-charcoal/70 rounded-lg hover:bg-lilly-white transition-colors">
+              <button className="flex items-center px-4 py-2 border border-gray-300 text-charcoal/70 rounded-lg hover:bg-gray-50 transition-colors">
                 <Download size={16} className="mr-2" />
                 Export as CSV
               </button>
-              <button className="flex items-center px-4 py-2 border border-storm-grey/30 text-charcoal/70 rounded-lg hover:bg-lilly-white transition-colors">
+              <button className="flex items-center px-4 py-2 border border-gray-300 text-charcoal/70 rounded-lg hover:bg-gray-50 transition-colors">
                 <Download size={16} className="mr-2" />
                 Export as PDF
               </button>
