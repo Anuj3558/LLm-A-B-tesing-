@@ -1,4 +1,4 @@
-import ModelConfig from "../models/modelConfig.js";
+import ModelConfig from "../models/ModelConfig.js";
 import { config } from "../globalconfig.js";
 
 /**

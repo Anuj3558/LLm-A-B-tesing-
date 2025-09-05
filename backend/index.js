@@ -4,12 +4,18 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './connection.js';
 import AdminRouter from './router/Admin/AdminRouter.js';
 import UserRouter from './router/User/UserRouter.js';
 import llmTestingRoutes from './routes/llmTesting.js';
 import promptHistoryRoutes from './routes/promptHistory.js';
 import { loginUser } from './services/Auth.js';
+
+// Get directory name for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load env vars
 dotenv.config();
@@ -23,7 +29,7 @@ const app = express();
 // CORS configuration for different environments
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CORS_ORIGIN || 'https://your-app-name.vercel.app'
+    ? process.env.CORS_ORIGIN || 'https://genzeon-ab.vercel.app'
     : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -51,6 +57,20 @@ app.use("/api/user",UserRouter);
 app.use("/api/llm",llmTestingRoutes);
 // ===== Prompt History Routes =====
 app.use("/api/prompt-history",promptHistoryRoutes);
+
+// ===== Serve React App =====
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Handle React Router - send all non-API requests to React app
+app.get('*', (req, res) => {
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
 // ===== Start Server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

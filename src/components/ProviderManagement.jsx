@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, Key, Server, Settings, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
 
+// Get API base URL based on environment
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://genzeon-ab.vercel.app/api'
+  : 'http://localhost:5000/api'
+
 const ProviderManagement = () => {
   const [providers, setProviders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -46,7 +51,7 @@ const ProviderManagement = () => {
     try {
       setLoading(true)
       // This would call your existing model config API
-      const response = await fetch('/api/admin/model-configs', {
+      const response = await fetch(`${API_BASE_URL}/admin/model-configs`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -115,7 +120,7 @@ const ProviderManagement = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/model-configs/${providerId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/model-configs/${providerId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

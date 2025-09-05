@@ -15,7 +15,7 @@
     "dev:fullstack": "concurrently \"npm run dev\" \"npm run dev:backend\""
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.1.12",
+    "@tailwindcss/postcss": "^4.1.13",
     "@tailwindcss/vite": "^4.1.12",
     "antd": "^5.27.0",
     "axios": "^1.11.0",

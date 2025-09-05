@@ -595,8 +595,10 @@ const GlobalConfig = () => {
     { id: "json", name: "JSON View", icon: Settings },
   ]
 
-  // Get backend URL from environment variables
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+  // Get backend URL based on environment
+  const API_BASE_URL = import.meta.env.PROD 
+    ? 'https://genzeon-ab.vercel.app/api'
+    : 'http://localhost:5000/api'
 
   const getCookie = (name) => {
     const nameEQ = name + "="
