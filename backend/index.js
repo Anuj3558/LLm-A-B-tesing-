@@ -43,10 +43,6 @@ app.use(morgan('dev'));
 app.use(bodyParser.json()); // Parse JSON bodies
 app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded form data
 
-// ===== Test Route =====
-app.get('/', (req, res) => {
-  res.send({ message: 'Server is running 🚀' });
-});
 
 // ===== Login Route =====
 app.use('/api/auth/login',loginUser)
