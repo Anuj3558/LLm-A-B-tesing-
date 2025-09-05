@@ -180,6 +180,24 @@ export const config = {
             top_p: 1
           }
         },
+        'gemini-1.5-pro': { 
+          name: 'Gemini 1.5 Pro', 
+          route: '/v1beta/models/gemini-1.5-pro:generateContent',
+          defaultParams: {
+            temperature: 0.7,
+            max_tokens: 4096,
+            top_p: 1
+          }
+        },
+        'gemini-1.5-flash': { 
+          name: 'Gemini 1.5 Flash', 
+          route: '/v1beta/models/gemini-1.5-flash:generateContent',
+          defaultParams: {
+            temperature: 0.7,
+            max_tokens: 4096,
+            top_p: 1
+          }
+        },
         'gemini-pro-vision': { 
           name: 'Gemini Pro Vision', 
           route: '/v1beta/models/gemini-pro-vision:generateContent',

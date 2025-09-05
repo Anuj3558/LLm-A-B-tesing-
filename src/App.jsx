@@ -72,8 +72,8 @@ function App() {
             <Route index element={<Navigate to="/admin/dashboard" />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
-            <Route path="providers" element={<ProviderManagement />} />
-            <Route path="llm-config" element={<LLMConfiguration />} />
+            {/* <Route path="providers" element={<ProviderManagement />} /> */}
+            {/* <Route path="llm-config" element={<LLMConfiguration />} /> */}
             <Route path="config" element={<GlobalConfig />} />
             <Route path="models" element={<ModelPerformance />} />
           </Route>

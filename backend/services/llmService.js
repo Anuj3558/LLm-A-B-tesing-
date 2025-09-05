@@ -32,7 +32,7 @@ const getModelConfigs = async () => {
   }
 
   try {
-    // Fetch all model configurations from database
+    // Fetch all model configurations from ModelConfig collection
     const dbConfigs = await ModelConfig.find({});
     
     // Clear and rebuild cache
@@ -49,6 +49,47 @@ const getModelConfigs = async () => {
         adminId: config.adminId,
       });
     });
+    
+    // Also load models from Global Config
+    try {
+      const { getGlobalConfigData } = await import('../controller/Admin/GlobalConfigController.js');
+      const { config } = await import('../globalconfig.js');
+      const globalConfigData = await getGlobalConfigData();
+      
+      if (globalConfigData && globalConfigData.models) {
+        Object.entries(globalConfigData.models).forEach(([modelId, modelConfig]) => {
+          // Determine provider from model ID using static config
+          let provider = 'unknown';
+          let modelName = modelId;
+          
+          // Check static config to get provider info
+          Object.entries(config.providers).forEach(([providerId, providerData]) => {
+            if (providerData.models[modelId]) {
+              provider = providerId;
+              modelName = providerData.models[modelId].name || modelId;
+            }
+          });
+          
+          configCache.set(modelId, {
+            id: modelId, // Use model ID as ID for global config models
+            provider: provider,
+            modelId: modelId,
+            apiKey: modelConfig.apiKey,
+            parameters: {
+              max_tokens: modelConfig.maxTokens,
+              temperature: modelConfig.temperature,
+              top_p: modelConfig.topP,
+              frequency_penalty: modelConfig.frequencyPenalty,
+              presence_penalty: modelConfig.presencePenalty
+            },
+            adminId: 'global', // Mark as global config
+            source: 'globalconfig'
+          });
+        });
+      }
+    } catch (globalConfigError) {
+      console.log('Note: Could not load global config models:', globalConfigError.message);
+    }
     
     // Set cache expiry
     cacheExpiry = now + CACHE_DURATION;
@@ -638,6 +679,27 @@ const callAzureOpenAI = async (modelConfig, prompt) => {
 
 // Main function to call appropriate LLM - completely database-driven
 const callLLM = async (modelId, prompt) => {
+  // Check if we're in test mode
+  if (process.env.TEST_MODE === 'true') {
+    console.log(`🎭 TEST MODE: Simulating call to ${modelId}`);
+    await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100)); // Random delay 100-300ms
+    
+    return {
+      success: true,
+      response: `[TEST MODE] This is a simulated response from ${modelId}. The model would normally process: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`,
+      metrics: {
+        accuracy: Math.floor(Math.random() * 20) + 80,
+        coherence: Math.floor(Math.random() * 20) + 80,
+        creativity: Math.floor(Math.random() * 20) + 80,
+        responseTime: Math.floor(Math.random() * 200) + 100,
+        tokens: Math.floor(Math.random() * 100) + 50,
+        inputTokens: prompt.split(' ').length,
+        outputTokens: Math.floor(Math.random() * 80) + 20,
+        wordCount: Math.floor(Math.random() * 50) + 20
+      }
+    };
+  }
+
   let modelConfig = null;
   
   // First, try to get configuration from database

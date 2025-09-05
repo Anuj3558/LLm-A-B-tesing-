@@ -10,8 +10,8 @@ const AdminLayout = ({ user, onLogout }) => {
   const navigation = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "User Management", href: "/admin/users", icon: Users },
-    { name: "Provider Management", href: "/admin/providers", icon: Server },
-    { name: "LLM Configuration", href: "/admin/llm-config", icon: Key },
+    // { name: "Provider Management", href: "/admin/providers", icon: Server },
+    // { name: "LLM Configuration", href: "/admin/llm-config", icon: Key },
     { name: "Global Config", href: "/admin/config", icon: Settings },
     { name: "Model Performance", href: "/admin/models", icon: BarChart3 },
   ]

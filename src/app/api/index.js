@@ -189,6 +189,19 @@ export const getAllAdminModels = async () => {
   }
 };
 
+// Get configured models from global config
+export const getConfiguredModels = async () => {
+  try {
+    const response = await api.get('/admin/configured-models');
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || 'Failed to fetch configured models' 
+    };
+  }
+};
+
 // ===== USER DASHBOARD FUNCTIONS =====
 export const fetchUserDashboard = async (userId) => {
   try {

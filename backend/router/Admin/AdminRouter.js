@@ -24,6 +24,15 @@ import {
   deleteConfig
 } from "../../controller/Admin/modelConfigController.js";
 
+import {
+  getGlobalConfig,
+  updateGlobalConfig,
+  getAvailableModels,
+  getConfiguredModels,
+  getProviders,
+  getProviderModels
+} from "../../controller/Admin/GlobalConfigController.js";
+
 // Import admin dashboard routes
 import AdminDashboard from "./AdminDashboard.js";
 
@@ -42,6 +51,16 @@ AdminRouter.post("/model-config", validateToken, createConfig);
 AdminRouter.get("/model-configs", validateToken, getConfigs);
 AdminRouter.put("/model-config/:id", validateToken, updateConfig);
 AdminRouter.delete("/model-config/:id", validateToken, deleteConfig);
+
+// Global Config routes
+AdminRouter.get("/global-config", validateToken, getGlobalConfig);
+AdminRouter.post("/global-config", validateToken, updateGlobalConfig);
+
+// Provider and Model routes
+AdminRouter.get("/available-models", validateToken, getAvailableModels);
+AdminRouter.get("/configured-models", validateToken, getConfiguredModels);
+AdminRouter.get("/providers", validateToken, getProviders);
+AdminRouter.get("/providers/:providerId/models", validateToken, getProviderModels);
 
 AdminRouter.get("/dashboard",validateToken,getDashboardData) // Legacy route for backward compatibility
 

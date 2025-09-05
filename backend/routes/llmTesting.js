@@ -44,13 +44,32 @@ router.post('/test-prompt', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get user's allowed model configs to validate against modelIds
-    const userAllowedModelConfigs = await ModelConfig.find({
-      _id: { $in: user.allowedModels },
-      adminId: user.adminId
+    // Separate ObjectId and string model IDs from user's allowed models
+    const objectIdModelIds = [];
+    const stringModelIds = [];
+    
+    user.allowedModels.forEach(modelId => {
+      if (modelId.match(/^[0-9a-fA-F]{24}$/)) {
+        objectIdModelIds.push(modelId);
+      } else {
+        stringModelIds.push(modelId);
+      }
     });
 
-    const allowedModelIds = new Set(userAllowedModelConfigs.map(m => m._id.toString()));
+    // Get ModelConfig entries for ObjectId-based models
+    let userAllowedModelConfigs = [];
+    if (objectIdModelIds.length > 0) {
+      userAllowedModelConfigs = await ModelConfig.find({
+        _id: { $in: objectIdModelIds },
+        adminId: user.adminId
+      });
+    }
+
+    // Create a set of all allowed model IDs (both ObjectIds and strings)
+    const allowedModelIds = new Set([
+      ...userAllowedModelConfigs.map(m => m._id.toString()),
+      ...stringModelIds
+    ]);
     
     // Validate that all requested modelIds are in user's allowed list
     const unauthorizedModels = modelIds.filter(id => !allowedModelIds.has(id));
@@ -136,25 +155,77 @@ router.get('/models', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get all available models
+    // Get all available models from ModelConfig database
     const allModels = await getAvailableModels();
     
-    // Filter models to only include those the user is allowed to access
-    const userAllowedModelConfigs = await ModelConfig.find({
-      _id: { $in: user.allowedModels },
-      adminId: user.adminId
+    // Also get global config models for string-based model IDs
+    const { getGlobalConfigData } = await import('../controller/Admin/GlobalConfigController.js');
+    const globalConfigData = await getGlobalConfigData();
+    
+    // Create global config models array
+    const globalConfigModels = [];
+    if (globalConfigData && globalConfigData.models) {
+      Object.entries(globalConfigData.models).forEach(([modelId, modelConfig]) => {
+        globalConfigModels.push({
+          id: modelId,
+          name: modelId,
+          provider: 'global',
+          description: `Global Config: ${modelId}`,
+          source: 'globalconfig',
+          apiKeyConfigured: !!modelConfig.apiKey,
+          parameters: {
+            maxTokens: modelConfig.maxTokens,
+            temperature: modelConfig.temperature,
+            topP: modelConfig.topP,
+            frequencyPenalty: modelConfig.frequencyPenalty,
+            presencePenalty: modelConfig.presencePenalty
+          },
+          enabled: modelConfig.enabled
+        });
+      });
+    }
+    
+    // Combine both sources
+    const allAvailableModels = [...allModels, ...globalConfigModels];
+    
+    // Separate ObjectId and string model IDs from user's allowed models
+    const objectIdModelIds = [];
+    const stringModelIds = [];
+    
+    user.allowedModels.forEach(modelId => {
+      if (modelId.match(/^[0-9a-fA-F]{24}$/)) {
+        objectIdModelIds.push(modelId);
+      } else {
+        stringModelIds.push(modelId);
+      }
     });
+    
+    // Get ModelConfig entries for ObjectId-based models
+    let userAllowedModelConfigs = [];
+    if (objectIdModelIds.length > 0) {
+      userAllowedModelConfigs = await ModelConfig.find({
+        _id: { $in: objectIdModelIds },
+        adminId: user.adminId
+      });
+    }
 
-    // Create a map of allowed model IDs for quick lookup
-    const allowedModelIds = new Set(userAllowedModelConfigs.map(m => m._id.toString()));
+    // Create a map of allowed model IDs for quick lookup (both ObjectIds and strings)
+    const allowedModelIds = new Set([
+      ...userAllowedModelConfigs.map(m => m._id.toString()),
+      ...stringModelIds
+    ]);
     
     // Filter the available models to only include allowed ones
-    const filteredModels = allModels.filter(model => {
-      // For database-sourced models, check if the model ID is in user's allowed list
+    const filteredModels = allAvailableModels.filter(model => {
+      // For database-sourced models with configId, check if the configId is in user's allowed list
       if (model.source === 'database' && model.configId) {
         return allowedModelIds.has(model.configId.toString());
       }
-      return false; // Don't include non-database models for security
+      // For global config models, check if the model ID is in user's allowed list
+      if (model.source === 'globalconfig' && stringModelIds.includes(model.id)) {
+        return true;
+      }
+      return false;
     });
 
     const apiKeyStatus = await validateApiKeys();
@@ -168,6 +239,7 @@ router.get('/models', authenticateToken, async (req, res) => {
         totalModels: filteredModels.length,
         availableProviders: Object.keys(apiKeyStatus.combined).filter(key => apiKeyStatus.combined[key]),
         configuredInDatabase: filteredModels.filter(m => m.source === 'database').length,
+        configuredInGlobalConfig: filteredModels.filter(m => m.source === 'globalconfig').length,
         userAllowedModels: user.allowedModels.length,
       },
     });

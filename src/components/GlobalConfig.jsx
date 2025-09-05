@@ -1,7 +1,114 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Save, RotateCcw, Settings, Key, Globe, Database, Search, Plus, X, Eye, EyeOff, Check, ChevronDown, Trash2 } from "lucide-react"
+import { Save, RotateCcw, Settings, Key, Globe, Database, Search, Plus, X, Eye, EyeOff, Check, ChevronDown, Trash2, Edit3 } from "lucide-react"
+
+// Comprehensive provider and model data
+const AI_PROVIDERS = {
+  openai: {
+    name: "OpenAI",
+    models: [
+      { id: "gpt-4", name: "GPT-4", description: "Most capable GPT-4 model" },
+      { id: "gpt-4-turbo", name: "GPT-4 Turbo", description: "Latest GPT-4 Turbo model" },
+      { id: "gpt-4-turbo-preview", name: "GPT-4 Turbo Preview", description: "Preview of GPT-4 Turbo" },
+      { id: "gpt-4-0314", name: "GPT-4 (March 2023)", description: "GPT-4 snapshot from March 14, 2023" },
+      { id: "gpt-4-0613", name: "GPT-4 (June 2023)", description: "GPT-4 snapshot from June 13, 2023" },
+      { id: "gpt-4-1106-preview", name: "GPT-4 Turbo (November 2023)", description: "GPT-4 Turbo preview model" },
+      { id: "gpt-4-0125-preview", name: "GPT-4 Turbo (January 2024)", description: "Latest GPT-4 Turbo preview" },
+      { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", description: "Most capable GPT-3.5 model" },
+      { id: "gpt-3.5-turbo-16k", name: "GPT-3.5 Turbo 16K", description: "Extended context GPT-3.5" },
+      { id: "gpt-3.5-turbo-0301", name: "GPT-3.5 Turbo (March 2023)", description: "GPT-3.5 Turbo snapshot" },
+      { id: "gpt-3.5-turbo-0613", name: "GPT-3.5 Turbo (June 2023)", description: "GPT-3.5 Turbo snapshot" },
+      { id: "gpt-3.5-turbo-1106", name: "GPT-3.5 Turbo (November 2023)", description: "Latest GPT-3.5 Turbo" },
+      { id: "text-davinci-003", name: "Davinci 003", description: "Most capable GPT-3 model" },
+      { id: "text-davinci-002", name: "Davinci 002", description: "GPT-3 Davinci model" },
+      { id: "code-davinci-002", name: "Codex Davinci", description: "Code generation model" },
+    ]
+  },
+  anthropic: {
+    name: "Anthropic",
+    models: [
+      { id: "claude-3-opus-20240229", name: "Claude 3 Opus", description: "Most intelligent Claude model" },
+      { id: "claude-3-sonnet-20240229", name: "Claude 3 Sonnet", description: "Balanced Claude model" },
+      { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", description: "Fastest Claude model" },
+      { id: "claude-2.1", name: "Claude 2.1", description: "Updated Claude 2 model" },
+      { id: "claude-2.0", name: "Claude 2.0", description: "Claude 2 base model" },
+      { id: "claude-instant-1.2", name: "Claude Instant 1.2", description: "Fast Claude model" },
+      { id: "claude-instant-1.1", name: "Claude Instant 1.1", description: "Claude Instant model" },
+    ]
+  },
+  google: {
+    name: "Google",
+    models: [
+      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", description: "Latest Gemini Pro model" },
+      { id: "gemini-1.0-pro", name: "Gemini 1.0 Pro", description: "Gemini Pro model" },
+      { id: "gemini-pro", name: "Gemini Pro", description: "Google's most capable model" },
+      { id: "gemini-pro-vision", name: "Gemini Pro Vision", description: "Multimodal Gemini model" },
+      { id: "text-bison-001", name: "PaLM 2 Text Bison", description: "PaLM 2 for text" },
+      { id: "chat-bison-001", name: "PaLM 2 Chat Bison", description: "PaLM 2 for conversations" },
+      { id: "codechat-bison-001", name: "PaLM 2 Code Chat", description: "PaLM 2 for code" },
+    ]
+  },
+  meta: {
+    name: "Meta",
+    models: [
+      { id: "llama-2-70b-chat", name: "Llama 2 70B Chat", description: "Largest Llama 2 chat model" },
+      { id: "llama-2-13b-chat", name: "Llama 2 13B Chat", description: "Medium Llama 2 chat model" },
+      { id: "llama-2-7b-chat", name: "Llama 2 7B Chat", description: "Smallest Llama 2 chat model" },
+      { id: "llama-2-70b", name: "Llama 2 70B", description: "Largest Llama 2 base model" },
+      { id: "llama-2-13b", name: "Llama 2 13B", description: "Medium Llama 2 base model" },
+      { id: "llama-2-7b", name: "Llama 2 7B", description: "Smallest Llama 2 base model" },
+      { id: "code-llama-34b", name: "Code Llama 34B", description: "Large Code Llama model" },
+      { id: "code-llama-13b", name: "Code Llama 13B", description: "Medium Code Llama model" },
+      { id: "code-llama-7b", name: "Code Llama 7B", description: "Small Code Llama model" },
+    ]
+  },
+  mistral: {
+    name: "Mistral AI",
+    models: [
+      { id: "mistral-large", name: "Mistral Large", description: "Largest Mistral model" },
+      { id: "mistral-medium", name: "Mistral Medium", description: "Medium Mistral model" },
+      { id: "mistral-small", name: "Mistral Small", description: "Small Mistral model" },
+      { id: "mistral-tiny", name: "Mistral Tiny", description: "Tiniest Mistral model" },
+      { id: "mixtral-8x7b", name: "Mixtral 8x7B", description: "Mixture of experts model" },
+    ]
+  },
+  cohere: {
+    name: "Cohere",
+    models: [
+      { id: "command", name: "Command", description: "Cohere's flagship model" },
+      { id: "command-light", name: "Command Light", description: "Lighter version of Command" },
+      { id: "command-nightly", name: "Command Nightly", description: "Latest Command model" },
+      { id: "command-r", name: "Command R", description: "Command model with retrieval" },
+      { id: "command-r-plus", name: "Command R+", description: "Enhanced Command R model" },
+    ]
+  },
+  together: {
+    name: "Together AI",
+    models: [
+      { id: "togethercomputer/llama-2-70b-chat", name: "Llama 2 70B Chat", description: "Together's Llama 2 70B" },
+      { id: "togethercomputer/llama-2-13b-chat", name: "Llama 2 13B Chat", description: "Together's Llama 2 13B" },
+      { id: "togethercomputer/falcon-40b", name: "Falcon 40B", description: "Falcon large model" },
+      { id: "togethercomputer/falcon-7b", name: "Falcon 7B", description: "Falcon small model" },
+    ]
+  },
+  huggingface: {
+    name: "Hugging Face",
+    models: [
+      { id: "microsoft/DialoGPT-large", name: "DialoGPT Large", description: "Conversational model" },
+      { id: "microsoft/DialoGPT-medium", name: "DialoGPT Medium", description: "Medium conversational model" },
+      { id: "facebook/blenderbot-400M-distill", name: "BlenderBot 400M", description: "Conversational AI" },
+      { id: "google/flan-t5-xxl", name: "FLAN-T5 XXL", description: "Instruction-tuned T5" },
+      { id: "google/flan-t5-xl", name: "FLAN-T5 XL", description: "Large instruction-tuned T5" },
+    ]
+  },
+  custom: {
+    name: "Custom/Other",
+    models: [
+      { id: "custom", name: "Custom Model", description: "Manually specify model name" },
+    ]
+  }
+};
 
 // Add Model Modal Component
 const AddModelModal = ({ 
@@ -16,6 +123,58 @@ const AddModelModal = ({
   isFormValid,
   availableModels 
 }) => {
+  const [selectedProvider, setSelectedProvider] = useState('')
+  const [filteredModels, setFilteredModels] = useState([])
+  const [showCustomInput, setShowCustomInput] = useState(false)
+  const [customModelName, setCustomModelName] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  
+  // Filter models based on selected provider and search query
+  useEffect(() => {
+    if (!selectedProvider) {
+      setFilteredModels([])
+      return
+    }
+    
+    let models = AI_PROVIDERS[selectedProvider]?.models || []
+    
+    if (searchQuery) {
+      models = models.filter(model => 
+        model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        model.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        model.id.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+    
+    setFilteredModels(models)
+  }, [selectedProvider, searchQuery])
+
+  // Handle provider change
+  const handleProviderChange = (provider) => {
+    setSelectedProvider(provider)
+    setAddModelForm({...addModelForm, modelId: ''})
+    setShowCustomInput(provider === 'custom')
+    setCustomModelName('')
+    setSearchQuery('')
+  }
+
+  // Handle model selection
+  const handleModelSelect = (modelId) => {
+    if (modelId === 'custom') {
+      setShowCustomInput(true)
+      setAddModelForm({...addModelForm, modelId: ''})
+    } else {
+      setShowCustomInput(false)
+      setAddModelForm({...addModelForm, modelId})
+    }
+  }
+
+  // Handle custom model input
+  const handleCustomModelChange = (value) => {
+    setCustomModelName(value)
+    setAddModelForm({...addModelForm, modelId: value})
+  }
+
   if (!showAddModelModal) return null
 
   const handleModalClick = (e) => {
@@ -33,12 +192,12 @@ const AddModelModal = ({
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" 
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full overflow-hidden animate-pop-in" onClick={handleModalClick}>
+      <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-hidden animate-pop-in" onClick={handleModalClick}>
         {/* Modal Header */}
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50">
           <div>
             <h3 className="text-xl font-bold text-gray-900">Add New Model</h3>
-            <p className="text-sm text-gray-500 mt-1">Configure a new AI model</p>
+            <p className="text-sm text-gray-500 mt-1">Configure a new AI model with comprehensive provider selection</p>
           </div>
           <button
             onClick={() => setShowAddModelModal(false)}
@@ -51,28 +210,113 @@ const AddModelModal = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4">
-          {/* Model Selection */}
+        <div className="p-6 space-y-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+          {/* Provider Selection */}
           <div>
-            <label htmlFor="modelId" className="block text-sm font-medium text-gray-700 mb-1">
-              Model <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              AI Provider <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
-                id="modelId"
-                value={addModelForm.modelId}
-                onChange={(e) => setAddModelForm({...addModelForm, modelId: e.target.value})}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-8"
-                required
-              >
-                <option value="">Select a model</option>
-                {availableModels.map((model) => (
-                  <option key={model.id} value={model.id}>{model.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {Object.entries(AI_PROVIDERS).map(([key, provider]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleProviderChange(key)}
+                  className={`p-3 border rounded-lg text-left transition-all ${
+                    selectedProvider === key 
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{provider.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">{provider.models.length} models</div>
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Model Selection */}
+          {selectedProvider && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Model <span className="text-red-500">*</span>
+              </label>
+              
+              {/* Search Bar for Models */}
+              {selectedProvider !== 'custom' && (
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search models..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              {/* Custom Model Input */}
+              {showCustomInput ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Edit3 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="text"
+                      placeholder="Enter custom model name (e.g., my-custom-model-v1)"
+                      value={customModelName}
+                      onChange={(e) => handleCustomModelChange(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Enter the exact model name as required by your provider's API
+                  </p>
+                </div>
+              ) : (
+                /* Model Selection Grid */
+                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                  {filteredModels.length > 0 ? (
+                    filteredModels.map((model) => (
+                      <button
+                        key={model.id}
+                        type="button"
+                        onClick={() => handleModelSelect(model.id)}
+                        className={`p-3 text-left rounded-lg transition-all ${
+                          addModelForm.modelId === model.id 
+                            ? 'bg-blue-50 border-blue-500 border' 
+                            : 'hover:bg-gray-50 border border-transparent'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{model.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{model.description}</div>
+                        <div className="text-xs text-blue-600 mt-1 font-mono">{model.id}</div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <p>No models found</p>
+                      {searchQuery && (
+                        <p className="text-sm mt-1">Try a different search term</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Add custom option for non-custom providers */}
+              {selectedProvider !== 'custom' && (
+                <button
+                  type="button"
+                  onClick={() => setShowCustomInput(!showCustomInput)}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                >
+                  <Edit3 size={14} className="mr-1" />
+                  {showCustomInput ? 'Choose from list' : 'Enter custom model name'}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* API Key Field */}
           <div>
@@ -88,7 +332,7 @@ const AddModelModal = ({
                 value={addModelForm.apiKey}
                 onChange={(e) => setAddModelForm({...addModelForm, apiKey: e.target.value})}
                 className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Enter API key"
+                placeholder="Enter API key for the selected provider"
                 autoComplete="new-password"
               />
               <button
@@ -100,20 +344,56 @@ const AddModelModal = ({
                 {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {selectedProvider && (
+              <p className="text-xs text-gray-500 mt-1">
+                {selectedProvider === 'openai' && 'Get your API key from https://platform.openai.com/api-keys'}
+                {selectedProvider === 'anthropic' && 'Get your API key from https://console.anthropic.com'}
+                {selectedProvider === 'google' && 'Get your API key from https://makersuite.google.com/app/apikey'}
+                {selectedProvider === 'cohere' && 'Get your API key from https://dashboard.cohere.ai/api-keys'}
+                {selectedProvider === 'mistral' && 'Get your API key from https://console.mistral.ai'}
+                {selectedProvider === 'together' && 'Get your API key from https://api.together.xyz/settings/api-keys'}
+                {selectedProvider === 'huggingface' && 'Get your API key from https://huggingface.co/settings/tokens'}
+                {selectedProvider === 'custom' && 'Enter the API key required by your custom provider'}
+              </p>
+            )}
           </div>
 
-          {/* Max Tokens */}
-          <div>
-            <label htmlFor="maxTokens" className="block text-sm font-medium text-gray-700 mb-1">Max Tokens</label>
-            <input
-              id="maxTokens"
-              type="number"
-              value={addModelForm.maxTokens}
-              onChange={(e) => setAddModelForm({...addModelForm, maxTokens: parseInt(e.target.value)})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              min="1"
-              max="100000"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Max Tokens */}
+            <div>
+              <label htmlFor="maxTokens" className="block text-sm font-medium text-gray-700 mb-1">
+                Max Tokens
+              </label>
+              <input
+                id="maxTokens"
+                type="number"
+                value={addModelForm.maxTokens}
+                onChange={(e) => setAddModelForm({...addModelForm, maxTokens: parseInt(e.target.value)})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                min="1"
+                max="100000"
+                placeholder="4000"
+              />
+            </div>
+
+            {/* Status Field */}
+            <div>
+              <label htmlFor="enabled" className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <div className="relative">
+                <select
+                  id="enabled"
+                  value={addModelForm.enabled ? "enabled" : "disabled"}
+                  onChange={(e) => setAddModelForm({...addModelForm, enabled: e.target.value === "enabled"})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-8"
+                >
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+              </div>
+            </div>
           </div>
 
           {/* Temperature */}
@@ -129,28 +409,27 @@ const AddModelModal = ({
               step="0.1"
               value={addModelForm.temperature}
               onChange={(e) => setAddModelForm({...addModelForm, temperature: parseFloat(e.target.value)})}
-              className="w-full"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
             />
-          </div>
-
-          {/* Status Field */}
-          <div>
-            <label htmlFor="enabled" className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <div className="relative">
-              <select
-                id="enabled"
-                value={addModelForm.enabled ? "enabled" : "disabled"}
-                onChange={(e) => setAddModelForm({...addModelForm, enabled: e.target.value === "enabled"})}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-8"
-              >
-                <option value="enabled">Enabled</option>
-                <option value="disabled">Disabled</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>More Focused (0.0)</span>
+              <span>More Creative (2.0)</span>
             </div>
           </div>
+
+          {/* Model Info Display */}
+          {addModelForm.modelId && selectedProvider && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-900 mb-2">Selected Model Configuration</h4>
+              <div className="space-y-1 text-sm">
+                <div><span className="font-medium">Provider:</span> {AI_PROVIDERS[selectedProvider]?.name}</div>
+                <div><span className="font-medium">Model:</span> {addModelForm.modelId}</div>
+                <div><span className="font-medium">Max Tokens:</span> {addModelForm.maxTokens || 'Default'}</div>
+                <div><span className="font-medium">Temperature:</span> {addModelForm.temperature}</div>
+                <div><span className="font-medium">Status:</span> {addModelForm.enabled ? 'Enabled' : 'Disabled'}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}
@@ -430,6 +709,12 @@ const GlobalConfig = () => {
       },
     })
   }
+
+  // Load configuration on component mount
+  useEffect(() => {
+    fetchConfig()
+    fetchAvailableModels()
+  }, [])
 
   // Check if add model form is valid
   const isAddModelFormValid = () => {

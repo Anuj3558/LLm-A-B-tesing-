@@ -221,6 +221,7 @@ export const getAllUsers = async (req, res) => {
   try {
     const adminId = req.user.id; // Admin ID from authenticated user
     console.log("Fetching all users for admin:", adminId);
+    
     // Verify that the admin exists
     const admin = await Admin.findById(adminId);
     if (!admin) {
@@ -229,8 +230,8 @@ export const getAllUsers = async (req, res) => {
       });
     }
 
-    // Get all users under this admin
-    const users = await User.find({ adminId }).select('-password');
+    // Get ALL users in the database (any admin can manage any user)
+    const users = await User.find({}).select('-password').populate('adminId', 'username');
 
     res.status(200).json({
       message: "Users fetched successfully",
@@ -242,6 +243,7 @@ export const getAllUsers = async (req, res) => {
         role: user.role,
         isActive: user.isActive,
         adminId: user.adminId,
+        adminUsername: user.adminId?.username || 'Unknown',
         allowedModels: user.allowedModels || [],
         lastLogin: user.lastLogin,
         createdAt: user.createdAt,
@@ -698,9 +700,9 @@ export const updateAllowedModels = async (req, res) => {
   try {
     const { userId } = req.params;
     const { modelIds } = req.body;
-    const adminId = req.user.id; // Admin ID from authenticated user
+    const currentAdminId = req.user.id; // Current admin ID from authenticated user
 
-    console.log("Updating allowed models for user:", userId, "by admin:", adminId);
+    console.log("Updating allowed models for user:", userId, "by admin:", currentAdminId);
 
     // Validate input
     if (!Array.isArray(modelIds)) {
@@ -717,36 +719,88 @@ export const updateAllowedModels = async (req, res) => {
       });
     }
 
-    // Verify that this user belongs to the admin
-    if (user.adminId.toString() !== adminId) {
-      return res.status(403).json({ 
-        message: "You can only manage your own users" 
-      });
+    // Get the target user's admin ID (the admin who owns this user)
+    const targetUserAdminId = user.adminId;
+
+    // Verify that all provided model IDs are valid
+    // We need to check both ModelConfig collection (ObjectIds) and Global Config models (string IDs)
+    
+    const validModelIds = [];
+    const invalidModelIds = [];
+    
+    for (const modelId of modelIds.filter(id => id)) { // Filter out empty strings
+      let isValid = false;
+      
+      // Check if it's a valid ObjectId format and exists in ModelConfig
+      if (modelId.match(/^[0-9a-fA-F]{24}$/)) {
+        try {
+          const modelConfig = await ModelConfig.findOne({ 
+            _id: modelId, 
+            adminId: targetUserAdminId 
+          });
+          if (modelConfig) {
+            validModelIds.push(modelId);
+            isValid = true;
+          }
+        } catch (err) {
+          // Invalid ObjectId format, continue to check global config
+        }
+      }
+      
+      // If not found in ModelConfig, check if it's a valid global config model
+      if (!isValid) {
+        // Import the global config to check available models
+        const { config } = await import('../../globalconfig.js');
+        
+        // Also import the global config controller to access saved config data
+        const { getGlobalConfigData } = await import('./GlobalConfigController.js');
+        
+        // Check if the modelId exists in any provider's models (static config)
+        let foundInStaticConfig = false;
+        Object.values(config.providers).forEach(provider => {
+          if (provider.models[modelId]) {
+            foundInStaticConfig = true;
+          }
+        });
+        
+        // Check if the modelId exists in the saved global config data
+        let foundInSavedConfig = false;
+        try {
+          const savedConfigData = await getGlobalConfigData();
+          if (savedConfigData && savedConfigData.models && savedConfigData.models[modelId]) {
+            foundInSavedConfig = true;
+          }
+        } catch (err) {
+          console.log('Error checking saved config:', err.message);
+        }
+        
+        if (foundInStaticConfig || foundInSavedConfig) {
+          validModelIds.push(modelId);
+          isValid = true;
+        }
+      }
+      
+      if (!isValid) {
+        invalidModelIds.push(modelId);
+      }
     }
-
-    // Verify that all provided model IDs exist for this admin
-    const adminModels = await ModelConfig.find({ 
-      adminId, 
-      _id: { $in: modelIds.filter(id => id) } // Filter out empty strings
-    });
-
-    const validModelIds = adminModels.map(model => model._id.toString());
-    const invalidModelIds = modelIds.filter(id => id && !validModelIds.includes(id));
 
     if (invalidModelIds.length > 0) {
       return res.status(400).json({
-        message: "Some model IDs are invalid or don't belong to your admin account",
-        invalidIds: invalidModelIds
+        message: "Some model IDs are invalid",
+        invalidIds: invalidModelIds,
+        userAdminId: targetUserAdminId,
+        note: "Model IDs must be either valid ModelConfig ObjectIds for the user's admin or valid global config model identifiers"
       });
     }
 
     // Update user's allowed models
-    user.allowedModels = modelIds.filter(id => id); // Remove empty strings
+    user.allowedModels = validModelIds; // Use the validated model IDs
     await user.save();
 
-    // Update dashboard activity
+    // Update dashboard activity for the current admin performing the action
     await Dashboard.findOneAndUpdate(
-      { adminId: adminId },
+      { adminId: currentAdminId },
       {
         $push: {
           recentActivity: {
@@ -754,7 +808,7 @@ export const updateAllowedModels = async (req, res) => {
             user: user.username,
             status: "success",
             time: new Date().toDateString(),
-            action: `Model access updated for '${user.fullName || user.username}'`
+            action: `Model access updated for '${user.fullName || user.username}' (cross-admin update)`
           }
         }
       }
@@ -765,7 +819,8 @@ export const updateAllowedModels = async (req, res) => {
       user: {
         id: user._id,
         username: user.username,
-        allowedModels: user.allowedModels
+        allowedModels: user.allowedModels,
+        adminId: user.adminId
       }
     });
 
@@ -793,8 +848,10 @@ export const getAllModels = async (req, res) => {
       });
     }
 
-    // Get all model configurations for this admin
-    const models = await ModelConfig.find({ adminId }).select('_id providerId modelId parameters createdAt');
+    // Get ALL model configurations from ALL admins (since any admin can manage any user)
+    const models = await ModelConfig.find({})
+      .select('_id providerId modelId parameters createdAt adminId')
+      .populate('adminId', 'username');
 
     // Format the response
     const formattedModels = models.map(model => ({
@@ -802,8 +859,10 @@ export const getAllModels = async (req, res) => {
       name: `${model.providerId}-${model.modelId}`,
       providerId: model.providerId,
       modelId: model.modelId,
-      description: `${model.providerId.toUpperCase()} ${model.modelId}`,
+      description: `${model.providerId.toUpperCase()} ${model.modelId} (Admin: ${model.adminId?.username || 'Unknown'})`,
       parameters: model.parameters,
+      adminId: model.adminId._id,
+      adminUsername: model.adminId?.username || 'Unknown',
       createdAt: model.createdAt
     }));
 

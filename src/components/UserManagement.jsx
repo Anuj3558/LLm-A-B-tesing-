@@ -26,7 +26,8 @@ import {
   deleteUser, 
   toggleUserStatus,
   updateUserAllowedModels,
-  getAllAdminModels
+  getAllAdminModels,
+  getConfiguredModels
 } from "../app/api/index.js"
 
 // Enhanced Add User Modal Component (moved outside main component)
@@ -248,8 +249,22 @@ const ConfigModal = ({
 }) => {
   if (!showConfigModal || !selectedUser) return null
 
-  const [selectedModels, setSelectedModels] = useState(selectedUser.allowedModels || [])
+  const [selectedModels, setSelectedModels] = useState([])
   const [isSavingModels, setIsSavingModels] = useState(false)
+
+  // Reset selectedModels when selectedUser changes
+  useEffect(() => {
+    if (selectedUser) {
+      setSelectedModels(selectedUser.allowedModels || [])
+    }
+  }, [selectedUser])
+
+  // Helper function to get the actual admin ID from potentially populated adminId field
+  const getUserAdminId = (user) => {
+    return typeof user.adminId === 'object' 
+      ? user.adminId._id || user.adminId.id
+      : user.adminId;
+  }
 
   const handleModalClick = (e) => {
     e.stopPropagation()
@@ -324,10 +339,20 @@ const ConfigModal = ({
           {/* Model Management Section */}
           <div className="mb-6">
             <h4 className="text-lg font-medium text-gray-900 mb-3">Allowed Models</h4>
-            <p className="text-sm text-gray-500 mb-4">Select which models this user can access</p>
+            <p className="text-sm text-gray-500 mb-4">Select which models this user can access (showing models from user's admin)</p>
+            
+            {/* Debug information */}
+            <div className="mb-2 p-2 bg-gray-100 rounded text-xs">
+              <div>Total models available: {allModels.length}</div>
+              <div>User's admin: {selectedUser.adminUsername} (ID: {getUserAdminId(selectedUser)})</div>
+              <div>Models from user's admin: {allModels.filter(model => model.adminId === getUserAdminId(selectedUser)).length}</div>
+              <div>Currently selected: {selectedModels.length}</div>
+            </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {allModels.map(model => (
+              {allModels
+                .filter(model => model.adminId === getUserAdminId(selectedUser))
+                .map(model => (
                 <div 
                   key={model.id} 
                   className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -347,11 +372,20 @@ const ConfigModal = ({
                     <label className="ml-3 block text-sm font-medium text-gray-700">
                       {model.name}
                       <span className="block text-xs text-gray-500 mt-1">{model.description}</span>
+                      <span className="block text-xs text-blue-600 mt-1">Admin: {model.adminUsername}</span>
                     </label>
                   </div>
                 </div>
               ))}
             </div>
+            
+            {/* Show message if no models available */}
+            {allModels.filter(model => model.adminId === getUserAdminId(selectedUser)).length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <p>No models available for this user's admin.</p>
+                <p className="text-sm mt-1">The admin needs to configure some model configurations first.</p>
+              </div>
+            )}
             
             <div className="mt-4 flex justify-end">
               <button
@@ -647,14 +681,43 @@ const UserManagement = () => {
   // Fetch all available models from API
   const fetchAllModels = async () => {
     try {
-      const response = await getAllAdminModels()
-      if (response.success) {
-        setAllModels(response.data.models || [])
-      } else {
-        console.error('Error fetching models:', response.error)
+      // Try to get models from both sources
+      const [adminModelsResponse, configuredModelsResponse] = await Promise.all([
+        getAllAdminModels(),
+        getConfiguredModels()
+      ]);
+
+      let allModelsArray = [];
+
+      // Add models from ModelConfig collection (admin panel created models)
+      if (adminModelsResponse.success) {
+        allModelsArray = [...(adminModelsResponse.data.models || [])];
       }
+
+      // Add models from global config (global config created models)
+      if (configuredModelsResponse.success) {
+        const configuredModels = configuredModelsResponse.data.models || [];
+        allModelsArray = [...allModelsArray, ...configuredModels];
+      }
+
+      // Remove duplicates based on model ID
+      const uniqueModels = allModelsArray.filter((model, index, self) => 
+        index === self.findIndex(m => m.id === model.id)
+      );
+
+      setAllModels(uniqueModels);
+      console.log('Fetched models:', uniqueModels);
     } catch (err) {
-      console.error('Error fetching models:', err)
+      console.error('Error fetching models:', err);
+      // Fallback: try just the original endpoint
+      try {
+        const response = await getAllAdminModels();
+        if (response.success) {
+          setAllModels(response.data.models || []);
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback error fetching models:', fallbackErr);
+      }
     }
   }
 
@@ -985,6 +1048,7 @@ const UserManagement = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Allowed Models</th>
@@ -1008,6 +1072,11 @@ const UserManagement = () => {
                           <div className="text-sm text-gray-500">{user.email}</div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-700">
+                        {user.adminUsername || 'Unknown Admin'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

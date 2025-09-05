@@ -24,13 +24,28 @@ export const getUserAllowedModels = async (req, res) => {
       });
     }
 
-    // Get the actual model configurations
-    const models = await ModelConfig.find({ 
-      _id: { $in: user.allowedModels },
-      adminId: user.adminId 
-    }).select('_id providerId modelId parameters createdAt');
+    // Separate ObjectId and string model IDs
+    const objectIdModelIds = [];
+    const stringModelIds = [];
+    
+    user.allowedModels.forEach(modelId => {
+      if (modelId.match(/^[0-9a-fA-F]{24}$/)) {
+        objectIdModelIds.push(modelId);
+      } else {
+        stringModelIds.push(modelId);
+      }
+    });
 
-    // Format the response
+    // Get the actual model configurations from ModelConfig collection (ObjectId-based)
+    let models = [];
+    if (objectIdModelIds.length > 0) {
+      models = await ModelConfig.find({ 
+        _id: { $in: objectIdModelIds },
+        adminId: user.adminId 
+      }).select('_id providerId modelId parameters createdAt');
+    }
+
+    // Format the response for ModelConfig models
     const formattedModels = models.map(model => ({
       id: model._id,
       name: `${model.providerId}-${model.modelId}`,
@@ -38,8 +53,23 @@ export const getUserAllowedModels = async (req, res) => {
       modelId: model.modelId,
       description: `${model.providerId.toUpperCase()} ${model.modelId}`,
       parameters: model.parameters,
-      createdAt: model.createdAt
+      createdAt: model.createdAt,
+      source: 'modelconfig'
     }));
+
+    // Add string-based model IDs from global config
+    stringModelIds.forEach(modelId => {
+      formattedModels.push({
+        id: modelId,
+        name: modelId,
+        providerId: 'global',
+        modelId: modelId,
+        description: `Global Config Model: ${modelId}`,
+        parameters: {},
+        createdAt: new Date(),
+        source: 'globalconfig'
+      });
+    });
 
     res.status(200).json({
       message: "Allowed models fetched successfully",
