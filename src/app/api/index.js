@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Get API base URL based on environment  
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://genzeon-ab.vercel.app/api'
+  ? 'https://genzeon-ab.onrender.com/api'
   : 'http://localhost:5000/api';
 
 console.log('🌐 API Base URL:', API_BASE_URL);

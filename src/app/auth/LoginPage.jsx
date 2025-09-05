@@ -7,7 +7,7 @@ import 'react-toastify/dist/ReactToastify.css'
 
 // Get API URL based on environment
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://genzeon-ab.vercel.app/api'
+  ? 'https://genzeon-ab.onrender.com/api'
   : 'http://localhost:5000/api'
 
 const loginAPI = async (email, password) => {

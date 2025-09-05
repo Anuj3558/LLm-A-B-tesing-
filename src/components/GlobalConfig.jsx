@@ -597,7 +597,7 @@ const GlobalConfig = () => {
 
   // Get backend URL based on environment
   const API_BASE_URL = import.meta.env.PROD 
-    ? 'https://genzeon-ab.vercel.app/api'
+    ? 'https://genzeon-ab.onrender.com/api'
     : 'http://localhost:5000/api'
 
   const getCookie = (name) => {
