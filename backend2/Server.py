@@ -369,6 +369,12 @@ class LLMTester:
 # Initialize LLM tester
 llm_tester = LLMTester()
 
+PROMPT_TEST_COUNT = 0
+@app.route("/api/prompt-count", methods=["GET"])
+def get_prompt_count():
+    return jsonify({"total": PROMPT_TEST_COUNT})
+
+
 @app.route('/api/test-prompt', methods=['POST'])
 def test_prompt():
     """Main endpoint for testing prompts across multiple models"""
@@ -463,6 +469,9 @@ def test_prompt():
                 "fastestModel": fastest_model
             }
         }
+        global PROMPT_TEST_COUNT
+        PROMPT_TEST_COUNT += len([r for r in results if r['status'] == 'success'])
+        logger.info(f"Updated prompt test count: {PROMPT_TEST_COUNT}")
         
         logger.info(f"Completed session {session_id}: {successful_tests} successful, {failed_tests} failed")
         return jsonify(response_data)

@@ -1,18 +1,29 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Search, Filter, Calendar, RotateCcw, Edit, Trash2, ThumbsUp, ThumbsDown, Play } from "lucide-react"
+import { useState } from "react";
+import {
+  Search,
+  Filter,
+  Calendar,
+  RotateCcw,
+  Edit,
+  Trash2,
+  ThumbsUp,
+  ThumbsDown,
+  Play,
+} from "lucide-react";
 
 const PromptHistory = () => {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [dateFilter, setDateFilter] = useState("all")
-  const [modelFilter, setModelFilter] = useState("all")
-  const [resultFilter, setResultFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [modelFilter, setModelFilter] = useState("all");
+  const [resultFilter, setResultFilter] = useState("all");
 
   const promptHistory = [
     {
       id: 1,
-      prompt: "Explain the concept of machine learning and its applications in modern technology",
+      prompt:
+        "Explain the concept of machine learning and its applications in modern technology",
       timestamp: "2024-01-07 14:30:00",
       models: ["GPT-4", "Claude 3"],
       outcome: "Success",
@@ -48,7 +59,8 @@ const PromptHistory = () => {
     },
     {
       id: 4,
-      prompt: "Generate creative content for a marketing campaign about sustainable energy",
+      prompt:
+        "Generate creative content for a marketing campaign about sustainable energy",
       timestamp: "2024-01-06 09:20:00",
       models: ["GPT-4", "Gemini"],
       outcome: "Success",
@@ -82,69 +94,88 @@ const PromptHistory = () => {
       tokens: 312,
       responseTime: 1800,
     },
-  ]
+  ];
 
   const filteredHistory = promptHistory.filter((item) => {
-    const matchesSearch = item.prompt.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = item.prompt
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     const matchesModel =
       modelFilter === "all" || item.models.some((model) => model.toLowerCase().includes(modelFilter.toLowerCase()))
-    const matchesResult = resultFilter === "all" || item.outcome.toLowerCase() === resultFilter.toLowerCase()
+      {/*modelFilter === "all" ||
+      (Array.isArray(item.models)
+        ? item.models.some((model) =>
+            model.toLowerCase().includes(modelFilter.toLowerCase())
+          )
+        : item.model?.toLowerCase().includes(modelFilter.toLowerCase()));*/}
+    const matchesResult =
+      resultFilter === "all" ||
+      item.outcome.toLowerCase() === resultFilter.toLowerCase();
 
     // Simple date filtering (in a real app, you'd use proper date comparison)
-    let matchesDate = true
+    let matchesDate = true;
     if (dateFilter === "today") {
-      matchesDate = item.timestamp.includes("2024-01-07")
+      matchesDate = item.timestamp.includes("2024-01-07");
     } else if (dateFilter === "week") {
-      matchesDate = item.timestamp.includes("2024-01-0")
+      matchesDate = item.timestamp.includes("2024-01-0");
     }
 
-    return matchesSearch && matchesModel && matchesResult && matchesDate
-  })
+    return matchesSearch && matchesModel && matchesResult && matchesDate;
+  });
 
   const handleRetest = (prompt) => {
     // In a real app, this would navigate to the test page with the prompt pre-filled
-    console.log("Retesting prompt:", prompt.prompt)
-    alert(`Retesting: "${prompt.prompt.substring(0, 50)}..."`)
-  }
+    console.log("Retesting prompt:", prompt.prompt);
+    alert(`Retesting: "${prompt.prompt.substring(0, 50)}..."`);
+  };
 
   const handleEdit = (prompt) => {
     // In a real app, this would navigate to the test page with the prompt pre-filled for editing
-    console.log("Editing prompt:", prompt.prompt)
-    alert(`Editing: "${prompt.prompt.substring(0, 50)}..."`)
-  }
+    console.log("Editing prompt:", prompt.prompt);
+    alert(`Editing: "${prompt.prompt.substring(0, 50)}..."`);
+  };
 
   const handleDelete = (promptId) => {
     if (window.confirm("Are you sure you want to delete this prompt?")) {
-      console.log("Deleting prompt:", promptId)
+      console.log("Deleting prompt:", promptId);
       // In a real app, this would make an API call to delete the prompt
     }
-  }
+  };
 
   const getFeedbackIcon = (feedback) => {
     return feedback === "positive" ? (
       <ThumbsUp className="w-4 h-4 text-vibrant-teal" />
     ) : (
       <ThumbsDown className="w-4 h-4 text-crimson" />
-    )
-  }
+    );
+  };
 
   const getOutcomeColor = (outcome) => {
-    return outcome === "Success" ? "text-vibrant-teal bg-vibrant-teal/10" : "text-crimson bg-crimson/10"
-  }
+    return outcome === "Success"
+      ? "text-vibrant-teal bg-vibrant-teal/10"
+      : "text-crimson bg-crimson/10";
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-whale-blue mb-2">Prompt History</h1>
-        <p className="text-charcoal/70">Review and manage your previously tested prompts</p>
+        <h1 className="text-2xl font-bold text-whale-blue mb-2">
+          Prompt History
+        </h1>
+        <p className="text-charcoal/70">
+          Review and manage your previously tested prompts
+        </p>
       </div>
 
       {/* Filters */}
       <div className="bg-white shadow p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal/50" size={20} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal/50"
+              size={20}
+            />
             <input
               type="text"
               placeholder="Search prompts..."
@@ -208,20 +239,40 @@ const PromptHistory = () => {
           <table className="w-full">
             <thead className="bg-lilly-white">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">Prompt</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">Timestamp</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">Models</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">Outcome</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">Performance</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">Feedback</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">Actions</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">
+                  Prompt
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">
+                  Timestamp
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">
+                  Models
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">
+                  Outcome
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">
+                  Performance
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">
+                  Feedback
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-whale-blue">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-storm-grey/20">
               {filteredHistory.map((item) => (
-                <tr key={item.id} className="hover:bg-lilly-white/50 transition-colors">
+                <tr
+                  key={item.id}
+                  className="hover:bg-lilly-white/50 transition-colors"
+                >
                   <td className="px-6 py-4 max-w-xs">
-                    <div className="text-sm font-medium text-whale-blue truncate" title={item.prompt}>
+                    <div
+                      className="text-sm font-medium text-whale-blue truncate"
+                      title={item.prompt}
+                    >
                       {item.prompt}
                     </div>
                   </td>
@@ -242,7 +293,9 @@ const PromptHistory = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getOutcomeColor(item.outcome)}`}
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getOutcomeColor(
+                        item.outcome
+                      )}`}
                     >
                       {item.outcome}
                     </span>
@@ -250,7 +303,9 @@ const PromptHistory = () => {
                   <td className="px-6 py-4">
                     {item.outcome === "Success" ? (
                       <div className="text-sm">
-                        <div className="font-medium text-whale-blue">{item.accuracy}% accuracy</div>
+                        <div className="font-medium text-whale-blue">
+                          {item.accuracy}% accuracy
+                        </div>
                         <div className="text-charcoal/70">{item.bestModel}</div>
                         <div className="text-xs text-charcoal/50">
                           {item.tokens} tokens • {item.responseTime}ms
@@ -303,8 +358,12 @@ const PromptHistory = () => {
         <div className="bg-white shadow p-12 text-center">
           <div className="text-charcoal/50 mb-4">
             <Search size={48} className="mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-whale-blue mb-2">No prompts found</h3>
-            <p>Try adjusting your search criteria or create a new prompt test.</p>
+            <h3 className="text-lg font-medium text-whale-blue mb-2">
+              No prompts found
+            </h3>
+            <p>
+              Try adjusting your search criteria or create a new prompt test.
+            </p>
           </div>
           <button className="flex items-center justify-center mx-auto px-6 py-3 genzeon-gradient text-white rounded-lg hover:opacity-90 transition-opacity">
             <Play size={16} className="mr-2" />
@@ -313,7 +372,7 @@ const PromptHistory = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default PromptHistory
+export default PromptHistory;
