@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Search,
   Filter,
@@ -13,106 +13,85 @@ import {
   Play,
 } from "lucide-react";
 
+// Helper to get auth token
+const getAuthToken = () => {
+  return (
+    localStorage.getItem("authToken") ||
+    sessionStorage.getItem("authToken") ||
+    document.cookie.replace(
+      /(?:(?:^|.*;\s*)authToken\s*=\s*([^;]*).*$)|^.*$/,
+      "$1"
+    ) ||
+    null
+  );
+};
+
+// Helper to get userId
+const getUserId = () => {
+  const userId =
+    localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  if (userId) return userId;
+
+  try {
+    const token = getAuthToken();
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.userId || payload.sub || payload.id;
+    }
+  } catch (error) {
+    console.error("Error decoding token:", error);
+  }
+
+  return null;
+};
+
 const PromptHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [modelFilter, setModelFilter] = useState("all");
   const [resultFilter, setResultFilter] = useState("all");
+  const [promptHistory, setPromptHistory] = useState([]);
 
-  const promptHistory = [
-    {
-      id: 1,
-      prompt:
-        "Explain the concept of machine learning and its applications in modern technology",
-      timestamp: "2024-01-07 14:30:00",
-      models: ["GPT-4", "Claude 3"],
-      outcome: "Success",
-      feedback: "positive",
-      accuracy: 92,
-      bestModel: "GPT-4",
-      tokens: 156,
-      responseTime: 1200,
-    },
-    {
-      id: 2,
-      prompt: "Write a Python function to implement binary search algorithm",
-      timestamp: "2024-01-07 11:15:00",
-      models: ["GPT-4", "GPT-3.5", "Claude 3"],
-      outcome: "Success",
-      feedback: "positive",
-      accuracy: 88,
-      bestModel: "Claude 3",
-      tokens: 89,
-      responseTime: 950,
-    },
-    {
-      id: 3,
-      prompt: "Summarize the key points from the attached research paper",
-      timestamp: "2024-01-06 16:45:00",
-      models: ["GPT-3.5"],
-      outcome: "Error",
-      feedback: "negative",
-      accuracy: 0,
-      bestModel: null,
-      tokens: 0,
-      responseTime: 0,
-    },
-    {
-      id: 4,
-      prompt:
-        "Generate creative content for a marketing campaign about sustainable energy",
-      timestamp: "2024-01-06 09:20:00",
-      models: ["GPT-4", "Gemini"],
-      outcome: "Success",
-      feedback: "positive",
-      accuracy: 85,
-      bestModel: "GPT-4",
-      tokens: 234,
-      responseTime: 1450,
-    },
-    {
-      id: 5,
-      prompt: "Explain quantum computing principles for beginners",
-      timestamp: "2024-01-05 13:10:00",
-      models: ["Claude 3", "GPT-3.5"],
-      outcome: "Success",
-      feedback: "negative",
-      accuracy: 75,
-      bestModel: "Claude 3",
-      tokens: 198,
-      responseTime: 1100,
-    },
-    {
-      id: 6,
-      prompt: "Create a detailed project plan for developing a mobile app",
-      timestamp: "2024-01-05 10:30:00",
-      models: ["GPT-4"],
-      outcome: "Success",
-      feedback: "positive",
-      accuracy: 90,
-      bestModel: "GPT-4",
-      tokens: 312,
-      responseTime: 1800,
-    },
-  ];
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const token = getAuthToken();
+        const userId = getUserId();
+
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/user/get-prompt-history?userId=${userId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const data = await res.json();
+        if (data.success) {
+          setPromptHistory(data.history);
+        } else {
+          console.error("Failed to fetch history:", data.error);
+        }
+      } catch (error) {
+        console.error("Error fetching prompt history:", error);
+      }
+    };
+
+    fetchHistory();
+  }, []);
 
   const filteredHistory = promptHistory.filter((item) => {
     const matchesSearch = item.prompt
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesModel =
-      modelFilter === "all" || item.models.some((model) => model.toLowerCase().includes(modelFilter.toLowerCase()))
-      {/*modelFilter === "all" ||
-      (Array.isArray(item.models)
-        ? item.models.some((model) =>
-            model.toLowerCase().includes(modelFilter.toLowerCase())
-          )
-        : item.model?.toLowerCase().includes(modelFilter.toLowerCase()));*/}
+      modelFilter === "all" ||
+      item.models.some((model) =>
+        model.toLowerCase().includes(modelFilter.toLowerCase())
+      );
     const matchesResult =
       resultFilter === "all" ||
       item.outcome.toLowerCase() === resultFilter.toLowerCase();
 
-    // Simple date filtering (in a real app, you'd use proper date comparison)
     let matchesDate = true;
     if (dateFilter === "today") {
       matchesDate = item.timestamp.includes("2024-01-07");
@@ -124,13 +103,11 @@ const PromptHistory = () => {
   });
 
   const handleRetest = (prompt) => {
-    // In a real app, this would navigate to the test page with the prompt pre-filled
     console.log("Retesting prompt:", prompt.prompt);
     alert(`Retesting: "${prompt.prompt.substring(0, 50)}..."`);
   };
 
   const handleEdit = (prompt) => {
-    // In a real app, this would navigate to the test page with the prompt pre-filled for editing
     console.log("Editing prompt:", prompt.prompt);
     alert(`Editing: "${prompt.prompt.substring(0, 50)}..."`);
   };
@@ -138,7 +115,6 @@ const PromptHistory = () => {
   const handleDelete = (promptId) => {
     if (window.confirm("Are you sure you want to delete this prompt?")) {
       console.log("Deleting prompt:", promptId);
-      // In a real app, this would make an API call to delete the prompt
     }
   };
 
@@ -154,6 +130,11 @@ const PromptHistory = () => {
     return outcome === "Success"
       ? "text-vibrant-teal bg-vibrant-teal/10"
       : "text-crimson bg-crimson/10";
+  };
+
+  const handleStartNewTest = () => {
+    // Simple redirect in Vite + React
+    window.location.href = "/new-test";
   };
 
   return (
@@ -281,14 +262,15 @@ const PromptHistory = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
-                      {item.models.map((model, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex px-2 py-1 text-xs bg-vibrant-blue/10 text-vibrant-blue rounded"
-                        >
-                          {model}
-                        </span>
-                      ))}
+                      {item.models.map((model) => (
+                      <span
+                        key={model._id || model.name}
+                        className="inline-flex px-2 py-1 text-xs bg-vibrant-blue/10 text-vibrant-blue rounded"
+                        title={`${model.name} (${model.provider}) - ${model.endpoint}`}
+                      >
+                        {model.name} ({model.provider})
+                      </span>
+                    ))}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -365,7 +347,10 @@ const PromptHistory = () => {
               Try adjusting your search criteria or create a new prompt test.
             </p>
           </div>
-          <button className="flex items-center justify-center mx-auto px-6 py-3 genzeon-gradient text-white rounded-lg hover:opacity-90 transition-opacity">
+          <button
+            onClick={handleStartNewTest}
+            className="flex items-center justify-center mx-auto px-6 py-3 genzeon-gradient text-white rounded-lg hover:opacity-90 transition-opacity"
+          >
             <Play size={16} className="mr-2" />
             Start New Test
           </button>

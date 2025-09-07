@@ -2,6 +2,7 @@ import GlobalConfig from "../../models/Admin/ModelConfigSchema.js";
 import AllModelsConfig from "../../models/AllModelConfig.js";
 import UserDashboard from "../../models/User/UserDashboard.js";
 import UserModel from "../../models/UserModel.js";
+import PromptHistory from "../../models/User/PrompHistory.js";
 import axios from "axios";
 // @desc    Get user dashboard data
 // @route   GET /api/dashboards/user/:userId
@@ -459,3 +460,116 @@ export const checkExternalServerHealth = async (req, res) => {
     });
   }
 };
+
+export const savePromptHistory = async (req, res) => {
+  try {
+    const { userId, prompt, models, criteria, results } = req.body;
+
+    if (!userId || !prompt || !models || !criteria || !results) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields"
+      });
+    }
+
+    // Ensure user is saving only their own history
+    if (userId !== req.user?.id?.toString() && req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Access denied. You can only save your own history."
+      });
+    }
+
+    const history = new PromptHistory({
+      userId,
+      prompt,
+      models,
+      criteria,
+      results
+    });
+
+    await history.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Prompt history saved successfully",
+      data: history
+    });
+  } catch (error) {
+    console.error("Error saving prompt history:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error while saving prompt history",
+      details: error.message
+    });
+  }
+};
+
+// controller/User/userController.js
+export const getPromptHistory = async (req, res) => {
+  try {
+    const userId = req.query.userId;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing userId query parameter",
+      });
+    }
+
+    // Ensure user can only access their own history unless admin
+    if (userId !== req.user?.id?.toString() && req.user?.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Access denied. You can only view your own history.",
+      });
+    }
+
+    // Disable caching to avoid 304 responses
+    res.set("Cache-Control", "no-store");
+
+    // Fetch prompt history and populate both models and results.modelId
+    const history = await PromptHistory.find({ userId })
+      .sort({ createdAt: -1 })
+      .populate("models", "name provider endpoint")
+      .populate("results.modelId", "name provider endpoint")
+      .lean();
+
+    // Format history
+    const formattedHistory = history.map((item) => ({
+      ...item,
+      models: Array.isArray(item.models)
+        ? item.models.map((m) => ({
+            name: m?.name || "Unknown",
+            provider: m?.provider || "Unknown",
+            endpoint: m?.endpoint || "Unknown",
+          }))
+        : [],
+      results: Array.isArray(item.results)
+        ? item.results.map((r) => ({
+            ...r,
+            model: r.modelId
+              ? {
+                  name: r.modelId.name || "Unknown",
+                  provider: r.modelId.provider || "Unknown",
+                  endpoint: r.modelId.endpoint || "Unknown",
+                }
+              : null,
+          }))
+        : [],
+    }));
+
+    return res.status(200).json({
+      success: true,
+      history: formattedHistory,
+    });
+  } catch (error) {
+    console.error("Error fetching prompt history:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error while fetching prompt history",
+      details: error.message,
+    });
+  }
+};
+

@@ -107,6 +107,36 @@ const PromptTesting = () => {
     )
   }
 
+  const savePromptHistory = async (prompt, models, criteria, results) => {
+    try {
+      const token = getAuthToken();
+      const userId = getUserId();
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/prompt-history`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          userId,
+          prompt,
+          models,
+          criteria,
+          results,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      console.log("✅ Prompt history saved");
+    } catch (error) {
+      console.error("❌ Error saving prompt history:", error);
+    }
+  };
+
+
   const handleTest = async () => {
     if (!prompt.trim() || selectedModels.length === 0) {
       alert("Please enter a prompt and select at least one model.")
@@ -148,6 +178,7 @@ const PromptTesting = () => {
       
       if (data.success) {
         setTestResults(data.data.results);
+        savePromptHistory(prompt, selectedModels, evaluationCriteria, data.data.results);
       } else {
         throw new Error(data.error || 'Test failed');
       }
