@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, Key, Server, Settings, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
 
 // Get API base URL based on environment
-const API_BASE_URL = import.meta.env.PROD 
+const API_BASE_URL = import.meta.env.MODE === 'production'
   ? 'https://genzeon-ab.onrender.com/api'
   : 'http://localhost:5000/api'
 

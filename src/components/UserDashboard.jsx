@@ -15,6 +15,11 @@ import {
   ResponsiveContainer,
 } from "recharts"
 
+// Get API base URL based on environment
+const API_BASE_URL = import.meta.env.MODE === 'production'
+  ? 'https://genzeon-ab.onrender.com/api'
+  : 'http://localhost:5000/api';
+
 const UserDashboard = ({ userId }) => {
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -24,7 +29,7 @@ const UserDashboard = ({ userId }) => {
     console.log(userId)
     const fetchDashboard = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/dashboards/user/${userId}`)
+        const res = await fetch(`${API_BASE_URL}/user/dashboards/user/${userId}`)
         if (!res.ok) throw new Error("Failed to fetch dashboard data")
         const data = await res.json()
         setDashboardData(data)

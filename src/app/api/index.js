@@ -1,12 +1,14 @@
 import axios from 'axios';
 
 // Get API base URL based on environment  
-const API_BASE_URL = import.meta.env.PROD 
+const API_BASE_URL = import.meta.env.MODE === 'production'
   ? 'https://genzeon-ab.onrender.com/api'
   : 'http://localhost:5000/api';
 
 console.log('🌐 API Base URL:', API_BASE_URL);
-console.log('🏗️ Environment:', import.meta.env.VITE_APP_ENV || 'development');
+console.log('🏗️ Environment MODE:', import.meta.env.MODE);
+console.log('🏗️ Environment DEV:', import.meta.env.DEV);
+console.log('🏗️ Environment PROD:', import.meta.env.PROD);
 
 // Create axios instance
 const api = axios.create({

@@ -251,20 +251,89 @@ const MODEL_CONFIGS = {
 
 // Helper function to calculate response metrics
 const calculateMetrics = (response, responseTime, inputTokens, outputTokens) => {
-  // Simple heuristic-based scoring (you can enhance these with ML models)
-  const accuracy = Math.min(100, Math.max(60, 85 + Math.random() * 15));
-  const coherence = Math.min(100, Math.max(70, 90 + Math.random() * 10));
-  const creativity = Math.min(100, Math.max(50, 75 + Math.random() * 25));
-  
-  // Adjust scores based on response characteristics
   const responseLength = response.length;
-  const wordCount = response.split(' ').length;
+  const wordCount = response.split(/\s+/).filter(word => word.length > 0).length;
+  const sentenceCount = response.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+  const paragraphCount = response.split(/\n\s*\n/).filter(p => p.trim().length > 0).length;
   
-  // Longer, more detailed responses might score higher on accuracy
-  const lengthBonus = Math.min(10, responseLength / 100);
+  // Calculate actual accuracy based on response characteristics
+  let accuracy = 50; // Base score
+  
+  // Response completeness (is it a proper response?)
+  if (responseLength > 10) accuracy += 20;
+  if (wordCount > 5) accuracy += 10;
+  if (sentenceCount > 0) accuracy += 10;
+  
+  // Response structure quality
+  if (sentenceCount > 1) accuracy += 5; // Multiple sentences
+  if (paragraphCount > 1) accuracy += 5; // Multiple paragraphs
+  
+  // Cap at 100
+  accuracy = Math.min(100, accuracy);
+  
+  // Calculate coherence based on sentence structure and flow
+  let coherence = 60; // Base score
+  
+  // Average sentence length (good coherence has varied but reasonable sentence lengths)
+  const avgSentenceLength = wordCount / Math.max(sentenceCount, 1);
+  if (avgSentenceLength >= 8 && avgSentenceLength <= 25) {
+    coherence += 15; // Good sentence length
+  } else if (avgSentenceLength >= 5 && avgSentenceLength <= 30) {
+    coherence += 10; // Acceptable sentence length
+  }
+  
+  // Vocabulary diversity (unique words / total words)
+  const words = response.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+  const uniqueWords = new Set(words);
+  const vocabularyDiversity = uniqueWords.size / Math.max(words.length, 1);
+  
+  if (vocabularyDiversity > 0.7) coherence += 15; // High diversity
+  else if (vocabularyDiversity > 0.5) coherence += 10; // Good diversity
+  else if (vocabularyDiversity > 0.3) coherence += 5; // Fair diversity
+  
+  // Proper punctuation usage
+  const punctuationMarks = (response.match(/[.!?,:;]/g) || []).length;
+  const punctuationRatio = punctuationMarks / Math.max(wordCount, 1);
+  if (punctuationRatio >= 0.05 && punctuationRatio <= 0.2) {
+    coherence += 10; // Good punctuation usage
+  }
+  
+  coherence = Math.min(100, coherence);
+  
+  // Calculate creativity based on vocabulary and structure diversity
+  let creativity = 40; // Base score
+  
+  // Vocabulary sophistication (longer words suggest more creative language)
+  const avgWordLength = words.reduce((sum, word) => sum + word.length, 0) / Math.max(words.length, 1);
+  if (avgWordLength > 6) creativity += 20;
+  else if (avgWordLength > 5) creativity += 15;
+  else if (avgWordLength > 4) creativity += 10;
+  
+  // Sentence variety (different sentence lengths suggest creativity)
+  const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length);
+  const avgSentenceLen = sentenceLengths.reduce((sum, len) => sum + len, 0) / Math.max(sentenceLengths.length, 1);
+  const sentenceVariance = sentenceLengths.reduce((sum, len) => sum + Math.pow(len - avgSentenceLen, 2), 0) / Math.max(sentenceLengths.length, 1);
+  
+  if (sentenceVariance > 50) creativity += 20; // High variety
+  else if (sentenceVariance > 20) creativity += 15; // Good variety
+  else if (sentenceVariance > 10) creativity += 10; // Some variety
+  
+  // Use of descriptive language (adjectives, adverbs)
+  const descriptiveWords = response.match(/\w+ly\b|\w+ful\b|\w+ous\b|\w+ing\b|\w+ed\b/gi) || [];
+  const descriptiveRatio = descriptiveWords.length / Math.max(wordCount, 1);
+  if (descriptiveRatio > 0.15) creativity += 15;
+  else if (descriptiveRatio > 0.1) creativity += 10;
+  else if (descriptiveRatio > 0.05) creativity += 5;
+  
+  creativity = Math.min(100, creativity);
+  
+  // Calculate efficiency metrics
+  const tokensPerSecond = (inputTokens + outputTokens) / Math.max(responseTime / 1000, 0.1);
+  const wordsPerSecond = wordCount / Math.max(responseTime / 1000, 0.1);
   
   return {
-    accuracy: Math.round(accuracy + lengthBonus),
+    accuracy: Math.round(accuracy),
     coherence: Math.round(coherence),
     creativity: Math.round(creativity),
     responseTime,
@@ -272,6 +341,14 @@ const calculateMetrics = (response, responseTime, inputTokens, outputTokens) => 
     inputTokens,
     outputTokens,
     wordCount,
+    sentenceCount,
+    paragraphCount,
+    vocabularyDiversity: Math.round(vocabularyDiversity * 100) / 100,
+    avgWordLength: Math.round(avgWordLength * 10) / 10,
+    avgSentenceLength: Math.round(avgSentenceLength * 10) / 10,
+    tokensPerSecond: Math.round(tokensPerSecond * 100) / 100,
+    wordsPerSecond: Math.round(wordsPerSecond * 100) / 100,
+    efficiency: Math.round((wordsPerSecond * 10 + (100 - responseTime / 100)) / 2) // Combined efficiency score
   };
 };
 

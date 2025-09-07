@@ -6,7 +6,7 @@ import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 // Get API URL based on environment
-const API_BASE_URL = import.meta.env.PROD 
+const API_BASE_URL = import.meta.env.MODE === 'production'
   ? 'https://genzeon-ab.onrender.com/api'
   : 'http://localhost:5000/api'
 
@@ -220,7 +220,7 @@ const LoginPage = ({ onLogin }) => {
         pauseOnHover
         theme="light"
       />
-
+      <div>TESTING</div>
       <div className="relative w-full max-w-md">
         <div className="bg-white shadow-2xl apple-blur p-8 animate-scale-in">
           {/* Logo and Header */}
