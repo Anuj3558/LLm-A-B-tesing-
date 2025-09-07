@@ -327,14 +327,14 @@ const UsersTable = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1 max-w-xs">
-                      {user.allowedModels && user.allowedModels.length > 0 ? (
-                        user.allowedModels.map(modelId => {
-                          const model = allModels.find(m => m.id === modelId)
-                          return model ? (
+                      {console.log(user.allowedModel)}
+                      {user.allowedModel && user.allowedModel.length > 0 ? (
+                        user.allowedModel.map(modelId => {
+                          return  (
                             <span key={modelId} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                              {model.name}
+                              {modelId}
                             </span>
-                          ) : null
+                          )
                         })
                       ) : (
                         <span className="text-xs text-gray-500">No models assigned</span>

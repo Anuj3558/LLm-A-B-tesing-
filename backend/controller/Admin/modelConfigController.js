@@ -3,6 +3,7 @@ import AllModelsConfig from "../../models/AllModelConfig.js";
 import { ModelConfig } from "../../models/Admin/ModelConfigSchema.js";
 import AdminDashboard from "../../models/Admin/AdminDashboardSchema.js";
 import mongoose from "mongoose";
+import UserModel from "../../models/UserModel.js";
 
 // Helper function to validate model config data
 const validateModelConfigData = (config) => {
@@ -582,7 +583,6 @@ export const deleteModelConfig = async (req, res) => {
     const { globalConfigId } = req.params;
     const adminId = req.user.id;
 
-    // Validate input
     if (!globalConfigId) {
       return res.status(400).json({
         success: false,
@@ -590,11 +590,11 @@ export const deleteModelConfig = async (req, res) => {
       });
     }
 
-    // Verify admin owns this configuration
+    // Verify ownership
     const globalConfig = await GlobalConfig.findOne({
       _id: globalConfigId,
-      adminId: adminId
-    }).populate('modelId');
+      adminId: adminId,
+    }).populate("modelId");
 
     if (!globalConfig) {
       return res.status(403).json({
@@ -603,13 +603,20 @@ export const deleteModelConfig = async (req, res) => {
       });
     }
 
-    // Delete the model configuration
-    await ModelConfig.findByIdAndDelete(globalConfig.modelConfigId);
+    const modelId = new mongoose.Types.ObjectId(globalConfig.modelId._id);
+    const newAdminId = new mongoose.Types.ObjectId(adminId);
 
-    // Delete the global config
+    // Pull model from users’ allowedModel arrays
+    await UserModel.updateMany(
+      { adminId: newAdminId, allowedModel: modelId },
+      { $pull: { allowedModel: modelId } }
+    );
+
+    // Delete the model config + global config
+    await ModelConfig.findByIdAndDelete(modelId);
     await GlobalConfig.findByIdAndDelete(globalConfigId);
 
-    // Update admin dashboard
+    // Track activity
     await updateAdminActivity(adminId, "Model Deleted", globalConfig.modelId.name);
 
     res.status(200).json({
@@ -617,7 +624,6 @@ export const deleteModelConfig = async (req, res) => {
       message: "Model configuration deleted successfully",
       data: globalConfig,
     });
-
   } catch (error) {
     console.error("Error deleting model configuration:", error);
     res.status(500).json({
@@ -627,6 +633,7 @@ export const deleteModelConfig = async (req, res) => {
     });
   }
 };
+
 
 // Update Platform Configuration
 export const updatePlatformConfig = async (req, res) => {

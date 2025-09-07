@@ -29,6 +29,26 @@ const PromptTesting = () => {
            null;
   }
 
+  // Function to get userId from token or localStorage
+  const getUserId = () => {
+    // Try to get userId from localStorage first
+    const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+    if (userId) return userId;
+    
+    // If not in storage, try to decode from JWT token
+    try {
+      const token = getAuthToken();
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.userId || payload.sub || payload.id;
+      }
+    } catch (error) {
+      console.error('Error decoding token:', error);
+    }
+    
+    return null;
+  }
+
   // Fetch allowed models for the user
   useEffect(() => {
     const fetchAllowedModels = async () => {
@@ -57,10 +77,7 @@ const PromptTesting = () => {
         console.log("Allowed models response:", data.data.models.allowedModel);
         if (data.success) {
           setAvailableModels(data.data.models.allowedModel || []);
-          // Auto-select the first model if available
-          if (data.data.models.length > 0) {
-            setSelectedModels([data.data.models[0].id]);
-          }
+          // DO NOT auto-select any models - let user choose
         } else {
           throw new Error(data.error || 'Failed to fetch allowed models');
         }
@@ -100,16 +117,23 @@ const PromptTesting = () => {
 
     try {
       const token = getAuthToken();
+      const userId = getUserId();
+
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
 
       // Call your actual API endpoint for testing
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/prompt-test`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/prompt-test`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
+          userId,
           prompt,
           models: selectedModels,
           criteria: evaluationCriteria
@@ -154,6 +178,8 @@ const PromptTesting = () => {
   const handleFeedback = async (modelId, feedback) => {
     try {
       const token = getAuthToken();
+      const userId = getUserId();
+
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -163,6 +189,7 @@ const PromptTesting = () => {
         method: 'POST',
         headers,
         body: JSON.stringify({
+          userId,
           modelId,
           feedback,
           prompt,
@@ -273,8 +300,8 @@ const PromptTesting = () => {
                     >
                       <input
                         type="checkbox"
-                        checked={selectedModels.includes(model.id)}
-                        onChange={() => handleModelToggle(model.id)}
+                        checked={selectedModels.includes(model._id)}
+                        onChange={() => handleModelToggle(model._id)}
                         className="mt-1 mr-3 text-vibrant-blue focus:ring-vibrant-blue"
                       />
                       <div>
