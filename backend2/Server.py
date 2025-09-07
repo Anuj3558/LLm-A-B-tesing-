@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import phoenix as px
-from phoenix.otel import register
+import arize.phoenix as px
+from arize.phoenix.otel import register
 from openinference.instrumentation.openai import OpenAIInstrumentor
 from openinference.instrumentation.anthropic import AnthropicInstrumentor
 import threading
