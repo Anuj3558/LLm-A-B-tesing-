@@ -258,7 +258,7 @@ const PromptHistory = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-charcoal/70 font-mono">
-                    {new Date(item.timestamp).toLocaleString()}
+                    {new Date(item.createdAt).toLocaleString()}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">

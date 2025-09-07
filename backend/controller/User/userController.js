@@ -4,6 +4,7 @@ import UserDashboard from "../../models/User/UserDashboard.js";
 import UserModel from "../../models/UserModel.js";
 import PromptHistory from "../../models/User/PrompHistory.js";
 import axios from "axios";
+import AdminDashboard from "../../models/Admin/AdminDashboardSchema.js";
 // @desc    Get user dashboard data
 // @route   GET /api/dashboards/user/:userId
 // @access  Private
@@ -489,6 +490,61 @@ export const savePromptHistory = async (req, res) => {
     });
 
     await history.save();
+    
+    // Get adminId from user
+    const user = await UserModel.findById(req.user.id).select('adminId');
+    const adminId = user.adminId;
+    
+    console.log('Admin ID:', adminId);
+
+    // Update the dashboard - use aggregation pipeline to handle string conversion
+    try {
+      const result = await AdminDashboard.findOneAndUpdate(
+        { adminId: adminId, 'kpiData.title': 'Total Prompts Tested' },
+        [
+          {
+            $set: {
+              'kpiData': {
+                $map: {
+                  input: '$kpiData',
+                  as: 'kpi',
+                  in: {
+                    $cond: [
+                      { $eq: ['$$kpi.title', 'Total Prompts Tested'] },
+                      { 
+                        $mergeObjects: [
+                          '$$kpi',
+                          { 
+                            value: { 
+                              $add: [
+                                { $toInt: '$$kpi.value' }, 
+                                1
+                              ] 
+                            } 
+                          }
+                        ]
+                      },
+                      '$$kpi'
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        { new: true, runValidators: true }
+      );
+
+      if (!result) {
+        console.log('AdminDashboard not found for adminId:', adminId);
+        // You might want to create a dashboard if it doesn't exist
+      } else {
+        console.log('Dashboard updated successfully');
+      }
+    } catch (dashboardError) {
+      console.error('Error updating dashboard:', dashboardError);
+      // Don't fail the entire request if dashboard update fails
+    }
 
     return res.status(201).json({
       success: true,
