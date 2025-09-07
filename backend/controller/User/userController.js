@@ -267,7 +267,7 @@ export const testPromptAcrossModels = async (req, res) => {
       });
 
       console.log('✅ External server response received');
-
+    console.log(externalResponse.data)
       // Step 7: Process and return the response
       if (externalResponse.data && externalResponse.data.success) {
         // Log the successful test for analytics

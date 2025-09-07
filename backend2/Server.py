@@ -106,7 +106,7 @@ class LLMTester:
             # Extract response content
             content = response.choices[0].message.content
             
-            # Calculate metrics
+            # Calculate raw metrics only
             metrics = self.calculate_metrics(
                 content, 
                 response_time, 
@@ -171,7 +171,7 @@ class LLMTester:
             # Extract response content
             content = response.content[0].text
             
-            # Calculate metrics
+            # Calculate raw metrics only
             metrics = self.calculate_metrics(
                 content, 
                 response_time, 
@@ -285,7 +285,7 @@ class LLMTester:
                 prompt_tokens = int(prompt_tokens)
                 completion_tokens = int(completion_tokens)
             
-            # Calculate metrics
+            # Calculate raw metrics only
             metrics = self.calculate_metrics(
                 content, 
                 response_time, 
@@ -327,9 +327,9 @@ class LLMTester:
     def calculate_metrics(self, response_text: str, response_time: int, 
                          completion_tokens: int, prompt_tokens: int, 
                          criteria: List[str]) -> Dict[str, Any]:
-        """Calculate evaluation metrics for the response"""
+        """Calculate raw metrics for the response (no evaluation scores)"""
         
-        # Basic metrics
+        # Return only raw metrics data
         metrics = {
             "responseTime": response_time,
             "tokens": completion_tokens,
@@ -337,22 +337,6 @@ class LLMTester:
             "promptTokens": prompt_tokens,
             "totalTokens": completion_tokens + prompt_tokens
         }
-        print(metrics)
-        # Mock evaluation scores (in production, you'd use actual evaluation models)
-        import random
-        random.seed(hash(response_text) % 1000)  # Consistent scoring for same response
-        
-        for criterion in criteria:
-            if criterion.lower() == 'accuracy':
-                metrics['accuracy'] = random.randint(80, 98)
-            elif criterion.lower() == 'coherence':
-                metrics['coherence'] = random.randint(75, 95)
-            elif criterion.lower() == 'creativity':
-                metrics['creativity'] = random.randint(60, 90)
-            elif criterion.lower() == 'latency':
-                metrics['latency'] = response_time
-            elif criterion.lower() == 'tokens':
-                metrics['tokenEfficiency'] = min(95, max(50, 100 - (completion_tokens / 10)))
         
         return metrics
     
@@ -442,31 +426,29 @@ def test_prompt():
         end_time = time.time()
         execution_time = int((end_time - start_time) * 1000)
         
-        # Calculate summary
+        # Calculate summary with raw metrics only
         successful_tests = len([r for r in results if r['status'] == 'success'])
         failed_tests = len([r for r in results if r['status'] == 'error'])
         
-        # Calculate averages
+        # Calculate averages from raw metrics
         successful_results = [r for r in results if r['status'] == 'success' and r['metrics']]
         avg_response_time = 0
         total_tokens = 0
-        best_performing = None
+        fastest_model = None
         
         if successful_results:
             avg_response_time = int(sum(r['metrics']['responseTime'] for r in successful_results) / len(successful_results))
             total_tokens = sum(r['metrics']['totalTokens'] for r in successful_results)
             
-            # Find best performing model (highest accuracy score)
-            accuracy_results = [r for r in successful_results if r['metrics'].get('accuracy')]
-            if accuracy_results:
-                best_result = max(accuracy_results, key=lambda x: x['metrics']['accuracy'])
-                best_performing = {
-                    "modelId": best_result['modelId'],
-                    "modelName": best_result['modelName'],
-                    "score": best_result['metrics']['accuracy']
-                }
+            # Find fastest model (lowest response time)
+            fastest_result = min(successful_results, key=lambda x: x['metrics']['responseTime'])
+            fastest_model = {
+                "modelId": fastest_result['modelId'],
+                "modelName": fastest_result['modelName'],
+                "responseTime": fastest_result['metrics']['responseTime']
+            }
         
-        # Prepare response
+        # Prepare response with raw metrics
         response_data = {
             "success": True,
             "sessionId": session_id,
@@ -478,12 +460,7 @@ def test_prompt():
                 "failedTests": failed_tests,
                 "averageResponseTime": avg_response_time,
                 "totalTokensUsed": total_tokens,
-                "bestPerforming": best_performing
-            },
-            "evaluationDetails": {
-                "criteria": test_session.get('evaluationCriteria', []),
-                "methodology": "automated_scoring_v1",
-                "scoringEngine": "llm-evaluator-v2.1"
+                "fastestModel": fastest_model
             }
         }
         
@@ -528,26 +505,6 @@ def get_supported_models():
     return jsonify({
         "success": True,
         "providers": supported_models
-    })
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        "status": "healthy",
-        "phoenix_launched": phoenix_launched,
-        "tracer_configured": tracer_provider is not None,
-        "phoenix_url": "http://localhost:6006" if phoenix_launched else None,
-        "supported_providers": ["OpenAI", "Anthropic", "Gemini"]
-    })
-
-@app.route('/phoenix-status', methods=['GET'])
-def phoenix_status():
-    """Check Phoenix dashboard status"""
-    return jsonify({
-        "phoenix_launched": phoenix_launched,
-        "dashboard_url": "http://localhost:6006" if phoenix_launched else None,
-        "tracer_provider": tracer_provider is not None
     })
 
 def initialize_app():

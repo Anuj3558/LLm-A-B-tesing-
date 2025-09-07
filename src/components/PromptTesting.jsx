@@ -216,8 +216,8 @@ const PromptTesting = () => {
   const chartData =
     testResults?.map((result) => ({
       model: result.modelName,
-      tokens: result.tokens,
-      responseTime: result.responseTime,
+      tokens: result.metrics.tokens,
+      responseTime: result.metrics  .responseTime,
       accuracy: result.accuracy,
     })) || []
 
@@ -362,6 +362,7 @@ const PromptTesting = () => {
       </div>
 
       {/* Results Section */}
+      {console.log(testResults)}
       {testResults && (
         <div className="space-y-8">
           {/* Best Performing Model */}
@@ -390,11 +391,11 @@ const PromptTesting = () => {
                   <div className="flex space-x-4 text-sm text-charcoal/70">
                     <span className="flex items-center">
                       <Clock size={14} className="mr-1" />
-                      {result.responseTime}ms
+                      {result.metrics.responseTime}ms
                     </span>
                     <span className="flex items-center">
                       <Zap size={14} className="mr-1" />
-                      {result.tokens} tokens
+                      {result.metrics.tokens} tokens
                     </span>
                   </div>
                 </div>
