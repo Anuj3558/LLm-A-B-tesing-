@@ -108,7 +108,7 @@ export const AddAdminModelConfig = async (req, res) => {
       adminId: adminId,
       modelId: modelId
     });
-
+    console.log(existingGlobalConfig)
     if (existingGlobalConfig) {
       return res.status(409).json({
         success: false,
