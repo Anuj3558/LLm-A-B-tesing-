@@ -253,7 +253,7 @@ export const testPromptAcrossModels = async (req, res) => {
     console.log('📦 Prepared payload with', configurationDetails.length, 'configurations');
 
     // Step 6: Send data to external server
-    const EXTERNAL_SERVER_URL = process.env.EXTERNAL_TESTING_SERVER_URL || 'http://localhost:3001/api/test-prompt';
+    const EXTERNAL_SERVER_URL = process.env.EXTERNAL_TESTING_SERVER_URL || '35.239.39.90:3001/api/test-prompt';
     console.log(payloadToSend)
     try {
       console.log('🚀 Sending data to external server:', EXTERNAL_SERVER_URL);
