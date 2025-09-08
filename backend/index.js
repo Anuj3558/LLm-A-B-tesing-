@@ -30,6 +30,18 @@ app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded form da
 app.get('/', (req, res) => {
   res.send({ message: 'Server is running 🚀' });
 });
+
+// ===== Debug Route =====
+app.get('/api/debug/token', (req, res) => {
+  const authHeader = req.headers.authorization;
+  console.log('Auth Header:', authHeader);
+  res.json({ 
+    authHeader,
+    hasBearer: authHeader?.startsWith('Bearer '),
+    token: authHeader?.substring(7) 
+  });
+});
+
 // ===== Login Route =====
 app.use('/api/auth/login',loginUser)
 // ===== Admin Routes =====
