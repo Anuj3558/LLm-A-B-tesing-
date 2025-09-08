@@ -444,11 +444,13 @@ export const updateUser = async (req, res) => {
     }
 
     // Only push model IDs that are not already in allowedModel
-    filteredModelIds.forEach(modelId => {
+    /*filteredModelIds.forEach(modelId => {
       if (!user.allowedModel.includes(modelId)) {
         user.allowedModel.push(modelId);
       }
-    });
+    });*/
+    // Replace allowedModel array (add + remove support)
+    user.allowedModel = filteredModelIds;
 
     await user.save();
 

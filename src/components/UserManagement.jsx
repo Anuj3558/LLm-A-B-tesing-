@@ -90,7 +90,8 @@ const UserManagement = () => {
     }
   }
 
-  const updateAllowedModels = async (userId, modelIds) => {
+  //const updateAllowedModels = async (userId, modelIds) => {
+  const updateUser = async (userId, modelIds) => {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/update-allowed-models/${userId}`, {
         method: 'POST',
@@ -344,7 +345,8 @@ const UserManagement = () => {
         toggleUserStatus={toggleUserStatus}
         updateUserConfig={updateUserConfig}
         allModels={allModels}
-        updateAllowedModels={updateAllowedModels}
+        //updateAllowedModels={updateAllowedModels}
+        updateUser={updateUser}
       />
 
       <DeleteConfirmationModal 
