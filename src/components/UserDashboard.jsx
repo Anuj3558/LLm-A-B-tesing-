@@ -1,6 +1,9 @@
-import { useEffect, const API_BASE_URL = import.meta.env.PROD
+import { useEffect, useState } from "react";
+
+// API Base URL Configuration
+const API_BASE_URL = import.meta.env.PROD
   ? 'http://35.239.39.90:5000/api'
-  : 'http://localhost:5000/api'State } from "react";
+  : 'http://localhost:5000/api'
 import { TestTube, Cpu, Clock, Zap, TrendingUp, ThumbsUp, ThumbsDown, Activity, Settings, History } from "lucide-react";
 import {
   BarChart,
@@ -18,11 +21,6 @@ import {
 } from "recharts";
 import { Skeleton } from "antd";
 import Cookies from "js-cookie";
-
-// API Base URL
-const API_BASE_URL = import.meta.env.VITE_APP_ENV === 'production' 
-    ? 'http://35.239.39.90:5000/api'
-    : 'http://localhost:5000/api';
 
 // Dashboard Schema
 const dashboardSchema = {
