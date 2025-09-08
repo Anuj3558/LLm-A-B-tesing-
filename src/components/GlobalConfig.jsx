@@ -54,10 +54,10 @@ const GlobalConfig = () => {
   ]
 
   // Get backend URL from environment variables
-    const API_BASE_URL = import.meta.env.VITE_APP_ENV === 'production' 
-    ? 'http://35.239.39.90:5000/api'
-    : 'http://localhost:5000/api'
-
+    const API_BASE_URL = import.meta.env.PROD
+      ? 'http://35.239.39.90:5000/api'
+      : 'http://localhost:5000/api'
+      
   const getCookie = (name) => {
     const nameEQ = name + "="
     const ca = document.cookie.split(';')

@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, const API_BASE_URL = import.meta.env.PROD
+  ? 'http://35.239.39.90:5000/api'
+  : 'http://localhost:5000/api'State } from "react";
 import { TestTube, Cpu, Clock, Zap, TrendingUp, ThumbsUp, ThumbsDown, Activity, Settings, History } from "lucide-react";
 import {
   BarChart,

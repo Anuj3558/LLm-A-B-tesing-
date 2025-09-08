@@ -6,7 +6,7 @@ import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 // Get API URL from environment variables
-  const API_BASE_URL = import.meta.env.VITE_APP_ENV === 'production' 
+  const API_BASE_URL = import.meta.env.PROD
     ? 'http://35.239.39.90:5000/api'
     : 'http://localhost:5000/api'
 
@@ -44,7 +44,10 @@ const validateTokenAPI = async (token) => {
 const setCookie = (name, value, days = 7) => {
   const expires = new Date()
   expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000))
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Strict;Secure`
+  // Only use Secure flag if on HTTPS
+  const isSecure = window.location.protocol === 'https:'
+  const secureFlag = isSecure ? ';Secure' : ''
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax${secureFlag}`
 }
 
 const getCookie = (name) => {
