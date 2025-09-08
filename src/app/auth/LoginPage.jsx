@@ -6,7 +6,9 @@ import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 // Get API URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+  const API_BASE_URL = import.meta.env.VITE_APP_ENV === 'production' 
+    ? 'http://35.239.39.90:5000/api'
+    : 'http://localhost:5000/api'
 
 const loginAPI = async (email, password) => {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {

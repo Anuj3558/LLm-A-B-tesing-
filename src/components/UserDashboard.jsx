@@ -17,6 +17,11 @@ import {
 import { Skeleton } from "antd";
 import Cookies from "js-cookie";
 
+// API Base URL
+const API_BASE_URL = import.meta.env.VITE_APP_ENV === 'production' 
+    ? 'http://35.239.39.90:5000/api'
+    : 'http://localhost:5000/api';
+
 // Dashboard Schema
 const dashboardSchema = {
   promptsTested: 0,
@@ -145,7 +150,7 @@ const UserDashboard = ({ userId }) => {
         };
 
         // Try to fetch real data first
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/user/dashboards/${userId}`, {
+        const res = await fetch(`${API_BASE_URL}/user/dashboards/${userId}`, {
           headers
         });
         
