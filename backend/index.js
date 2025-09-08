@@ -31,14 +31,14 @@ app.get('/', (req, res) => {
   res.send({ message: 'Server is running 🚀' });
 });
 // ===== Login Route =====
-app.use('/auth/login',loginUser)
+app.use('/api/auth/login',loginUser)
 // ===== Admin Routes =====
-app.use("/admin",AdminRouter);
+app.use("/api/admin",AdminRouter);
 // ===== User Routes =====
 // ======Add New LLM Model Route=====
-app.use('/llm', LLmRouter);
+app.use('/api/llm', LLmRouter);
 
-app.use('/user', UserRouter
+app.use('/api/user', UserRouter
 );
 // ===== Start Server =====
 const PORT = process.env.PORT || 5000;
